@@ -69,12 +69,10 @@ function renderGame() {
   renderSlots(level);
   renderBank(level);
   updateHints();
-  // Draw connections only once after slots are rendered and DOM is ready
+  // Draw connections only once after slots are rendered
   if (!renderGame._connectionsDrawn && !isEditorMode()) {
-    setTimeout(() => {
-      renderConnections(level);
-      renderGame._connectionsDrawn = true;
-    }, 0);
+    renderConnections(level);
+    renderGame._connectionsDrawn = true;
   }
 }
 
@@ -159,29 +157,26 @@ function renderConnections(level) {
   svg.setAttribute("width", rect.width);
   svg.setAttribute("height", rect.height);
   
-  // Wait for DOM to render
-  setTimeout(() => {
-    level.connections.forEach(conn => {
-      const [from, to] = conn.split(",");
-      const fromPos = parseCellPosition(from);
-      const toPos = parseCellPosition(to);
-      
-      const p1 = getCellSideCenter(fromPos.slotIndex, fromPos.cellIndex, fromPos.side);
-      const p2 = getCellSideCenter(toPos.slotIndex, toPos.cellIndex, toPos.side);
-      
-      if (p1 && p2) {
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", p1.x);
-        line.setAttribute("y1", p1.y);
-        line.setAttribute("x2", p2.x);
-        line.setAttribute("y2", p2.y);
-        line.setAttribute("stroke", "#333");
-        line.setAttribute("stroke-width", "2");
-        line.setAttribute("stroke-linecap", "round");
-        svg.appendChild(line);
-      }
-    });
-  }, 50);
+  level.connections.forEach(conn => {
+    const [from, to] = conn.split(",");
+    const fromPos = parseCellPosition(from);
+    const toPos = parseCellPosition(to);
+    
+    const p1 = getCellSideCenter(fromPos.slotIndex, fromPos.cellIndex, fromPos.side);
+    const p2 = getCellSideCenter(toPos.slotIndex, toPos.cellIndex, toPos.side);
+    
+    if (p1 && p2) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", "#333");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("stroke-linecap", "round");
+      svg.appendChild(line);
+    }
+  });
 }
 
 function parseCellPosition(str) {
@@ -452,42 +447,40 @@ function onDragEnd(e) {
   });
   
   if (!droppedOnSlot) {
-    // Dropped outside - animate back
+    // Dropped outside - animate back immediately
     animateBack();
   }
 }
 
 function animateBack() {
   if (!gameState.draggedElement || !gameState.dragData) return;
-  
   const { source, bankIndex, originalRect } = gameState.dragData;
-  
+  // Remove dragging class and reset z-index for instant snap-back
+  gameState.draggedElement.classList.remove("dragging");
+  gameState.draggedElement.style.zIndex = "";
+  void gameState.draggedElement.offsetWidth;
   if (source === "bank") {
-    // Animate back to original bank position
     if (originalRect) {
-      gameState.draggedElement.style.transition = "left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      gameState.draggedElement.style.transition = "left 0.1s linear, top 0.1s linear";
       gameState.draggedElement.style.left = originalRect.left + "px";
       gameState.draggedElement.style.top = originalRect.top + "px";
-      
       setTimeout(() => {
         cleanupDrag(true);
-      }, 300);
+      }, 100);
     } else {
       cleanupDrag(true);
     }
   } else {
-    // From slot - animate to bank position then show original
     const originalElement = document.querySelector(`[data-bank-index="${bankIndex}"]`);
     if (originalElement) {
       const rect = originalElement.getBoundingClientRect();
-      
-      gameState.draggedElement.style.transition = "left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      void gameState.draggedElement.offsetWidth;
+      gameState.draggedElement.style.transition = "left 0.1s linear, top 0.1s linear";
       gameState.draggedElement.style.left = rect.left + "px";
       gameState.draggedElement.style.top = rect.top + "px";
-      
       setTimeout(() => {
         cleanupDrag(true);
-      }, 300);
+      }, 100);
     } else {
       cleanupDrag(true);
     }
@@ -623,7 +616,20 @@ function renderEditor() {
   renderSlots(level);
   renderBank(level);
   updateHints();
-  setTimeout(() => renderConnections(level), 0);
+  // Remove automatic redraw of connections
+  // Add redraw button if not present
+  let redrawBtn = document.getElementById('redraw-lines-btn');
+  if (!redrawBtn) {
+    redrawBtn = document.createElement('button');
+    redrawBtn.id = 'redraw-lines-btn';
+    redrawBtn.textContent = 'Redraw Lines';
+    redrawBtn.style.position = 'absolute';
+    redrawBtn.style.top = '10px';
+    redrawBtn.style.right = '10px';
+    redrawBtn.style.zIndex = '10';
+    redrawBtn.onclick = () => renderConnections(level);
+    document.getElementById('game-container').appendChild(redrawBtn);
+  }
   
   // Render slots
   const slotsList = document.getElementById("editor-slots-list");
@@ -677,6 +683,10 @@ function renderEditor() {
       renderEditor();
     });
   });
+}
+
+function isEditorMode() {
+  return isEditor;
 }
 
 // ============================
