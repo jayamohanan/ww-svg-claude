@@ -119,7 +119,8 @@ function renderSlots(level) {
     // Allow dragging word out of slot
     if (placedWord) {
       slotDiv.style.cursor = "grab";
-      slotDiv.addEventListener("mousedown", (e) => startDragFromSlot(e, slotIndex, placedWord));
+    slotDiv.addEventListener("mousedown", (e) => startDragFromSlot(e, slotIndex, placedWord));
+    slotDiv.addEventListener("touchstart", (e) => startDragFromSlotTouch(e, slotIndex, placedWord));
     }
     
     slotsContainer.appendChild(slotDiv);
@@ -156,6 +157,7 @@ function renderBank(level) {
     }
     
     wordDiv.addEventListener("mousedown", (e) => startDragFromBank(e, word, bankIndex));
+    wordDiv.addEventListener("touchstart", (e) => startDragFromBankTouch(e, word, bankIndex));
     
     wrapper.appendChild(wordDiv);
     bankContainer.appendChild(wrapper);
@@ -330,6 +332,131 @@ function checkLevelComplete() {
 // ============================
 // DRAG AND DROP
 // ============================
+
+// --- Touch event helpers ---
+function getTouchCoords(e) {
+  const t = e.touches[0] || e.changedTouches[0];
+  return { clientX: t.clientX, clientY: t.clientY };
+}
+
+function startDragFromBankTouch(e, word, bankIndex) {
+  e.preventDefault();
+  const coords = getTouchCoords(e);
+  const element = e.currentTarget;
+  const rect = element.getBoundingClientRect();
+  const offsetX = coords.clientX - rect.left;
+  const offsetY = coords.clientY - rect.top;
+  gameState.draggedElement = element;
+  gameState.dragData = {
+    word,
+    bankIndex,
+    startX: coords.clientX,
+    startY: coords.clientY,
+    offsetX,
+    offsetY,
+    source: "bank",
+    originalRect: rect
+  };
+  element.classList.add("dragging");
+  element.style.position = "fixed";
+  element.style.left = (coords.clientX - offsetX) + "px";
+  element.style.top = (coords.clientY - offsetY) + "px";
+  element.style.zIndex = "1000";
+  element.style.transform = "none";
+  document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
+  document.addEventListener("touchend", onDragEndTouch);
+}
+
+function startDragFromSlotTouch(e, slotIndex, placedWord) {
+  e.preventDefault();
+  const coords = getTouchCoords(e);
+  const slot = e.currentTarget;
+  const rect = slot.getBoundingClientRect();
+  const offsetX = coords.clientX - rect.left;
+  const offsetY = coords.clientY - rect.top;
+  const tempElement = document.createElement("div");
+  tempElement.className = "bank-word dragging";
+  placedWord.word.split("").forEach(letter => {
+    const span = document.createElement("span");
+    span.className = "bank-letter";
+    span.textContent = letter;
+    tempElement.appendChild(span);
+  });
+  tempElement.style.position = "fixed";
+  tempElement.style.left = (coords.clientX - offsetX) + "px";
+  tempElement.style.top = (coords.clientY - offsetY) + "px";
+  tempElement.style.zIndex = "1000";
+  document.body.appendChild(tempElement);
+  gameState.draggedElement = tempElement;
+  gameState.dragData = {
+    word: placedWord.word,
+    bankIndex: placedWord.bankIndex,
+    slotIndex: slotIndex,
+    startX: coords.clientX,
+    startY: coords.clientY,
+    offsetX,
+    offsetY,
+    source: "slot",
+    tempElement: true
+  };
+  gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+  renderSlots(levels[currentLevelIndex]);
+  updateHints();
+  document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
+  document.addEventListener("touchend", onDragEndTouch);
+}
+
+function onDragMoveTouch(e) {
+  if (!gameState.draggedElement || !gameState.dragData) return;
+  e.preventDefault();
+  const coords = getTouchCoords(e);
+  const x = coords.clientX - gameState.dragData.offsetX;
+  const y = coords.clientY - gameState.dragData.offsetY;
+  gameState.draggedElement.style.left = x + "px";
+  gameState.draggedElement.style.top = y + "px";
+}
+
+function onDragEndTouch(e) {
+  if (!gameState.draggedElement || !gameState.dragData) return;
+  document.removeEventListener("touchmove", onDragMoveTouch);
+  document.removeEventListener("touchend", onDragEndTouch);
+  const coords = getTouchCoords(e);
+  const { word, bankIndex, source } = gameState.dragData;
+  const slots = document.querySelectorAll(".word-slot");
+  let droppedOnSlot = false;
+  slots.forEach((slot, index) => {
+    const rect = slot.getBoundingClientRect();
+    if (
+      coords.clientX >= rect.left &&
+      coords.clientX <= rect.right &&
+      coords.clientY >= rect.top &&
+      coords.clientY <= rect.bottom
+    ) {
+      droppedOnSlot = true;
+      if (checkConstraints(word, index)) {
+        placeWord(word, index, bankIndex);
+        if (gameState.dragData.tempElement) {
+          gameState.draggedElement.remove();
+        } else {
+          gameState.draggedElement.classList.remove("dragging");
+          gameState.draggedElement.style.position = "";
+          gameState.draggedElement.style.left = "";
+          gameState.draggedElement.style.top = "";
+          gameState.draggedElement.style.zIndex = "";
+          gameState.draggedElement.style.transition = "";
+        }
+        gameState.draggedElement = null;
+        gameState.dragData = null;
+      } else {
+        showError(coords.clientX, coords.clientY);
+        animateBack();
+      }
+    }
+  });
+  if (!droppedOnSlot) {
+    animateBack();
+  }
+}
 
 function startDragFromBank(e, word, bankIndex) {
   e.preventDefault();
