@@ -59,6 +59,7 @@ function saveLevels() {
 function startLevel(index) {
   currentLevelIndex = index;
   gameState.placedWords = [];
+  renderGame._connectionsDrawn = false;
   renderGame();
   document.getElementById("success-screen").classList.add("hidden");
 }
@@ -67,8 +68,14 @@ function renderGame() {
   const level = levels[currentLevelIndex];
   renderSlots(level);
   renderBank(level);
-  renderConnections(level);
   updateHints();
+  // Draw connections only once after slots are rendered and DOM is ready
+  if (!renderGame._connectionsDrawn && !isEditorMode()) {
+    setTimeout(() => {
+      renderConnections(level);
+      renderGame._connectionsDrawn = true;
+    }, 0);
+  }
 }
 
 function renderSlots(level) {
@@ -168,8 +175,8 @@ function renderConnections(level) {
         line.setAttribute("y1", p1.y);
         line.setAttribute("x2", p2.x);
         line.setAttribute("y2", p2.y);
-        line.setAttribute("stroke", "#2196f3");
-        line.setAttribute("stroke-width", "4");
+        line.setAttribute("stroke", "#333");
+        line.setAttribute("stroke-width", "2");
         line.setAttribute("stroke-linecap", "round");
         svg.appendChild(line);
       }
@@ -319,9 +326,9 @@ function startDragFromBank(e, word, bankIndex) {
   const element = e.currentTarget;
   const rect = element.getBoundingClientRect();
   
-  // Calculate offset to center of word (50px per letter with 2px gap between cells)
-  const wordWidth = word.length * 50 + (word.length - 1) * 2;
-  const centerOffset = wordWidth / 2;
+  // Calculate offset from mouse to top-left of word
+  const offsetX = e.clientX - rect.left;
+  const offsetY = e.clientY - rect.top;
   
   gameState.draggedElement = element;
   gameState.dragData = {
@@ -329,16 +336,16 @@ function startDragFromBank(e, word, bankIndex) {
     bankIndex,
     startX: e.clientX,
     startY: e.clientY,
-    offsetX: centerOffset,
-    offsetY: e.clientY - rect.top,
+    offsetX,
+    offsetY,
     source: "bank",
     originalRect: rect
   };
   
   element.classList.add("dragging");
   element.style.position = "fixed";
-  element.style.left = (e.clientX - centerOffset) + "px";
-  element.style.top = (e.clientY - gameState.dragData.offsetY) + "px";
+  element.style.left = (e.clientX - offsetX) + "px";
+  element.style.top = (e.clientY - offsetY) + "px";
   element.style.zIndex = "1000";
   element.style.transform = "none";
   
@@ -348,15 +355,10 @@ function startDragFromBank(e, word, bankIndex) {
 
 function startDragFromSlot(e, slotIndex, placedWord) {
   e.preventDefault();
-  
   const slot = e.currentTarget;
   const rect = slot.getBoundingClientRect();
-  
-  // Calculate word width and center offset
-  const wordWidth = placedWord.word.length * 50 + (placedWord.word.length - 1) * 2;
-  const centerOffset = wordWidth / 2;
-  
-  // Create a temporary drag element
+  const offsetX = e.clientX - rect.left;
+  const offsetY = e.clientY - rect.top;
   const tempElement = document.createElement("div");
   tempElement.className = "bank-word dragging";
   placedWord.word.split("").forEach(letter => {
@@ -365,13 +367,11 @@ function startDragFromSlot(e, slotIndex, placedWord) {
     span.textContent = letter;
     tempElement.appendChild(span);
   });
-  
   tempElement.style.position = "fixed";
-  tempElement.style.left = (e.clientX - centerOffset) + "px";
-  tempElement.style.top = (e.clientY - 25) + "px";
+  tempElement.style.left = (e.clientX - offsetX) + "px";
+  tempElement.style.top = (e.clientY - offsetY) + "px";
   tempElement.style.zIndex = "1000";
   document.body.appendChild(tempElement);
-  
   gameState.draggedElement = tempElement;
   gameState.dragData = {
     word: placedWord.word,
@@ -379,18 +379,16 @@ function startDragFromSlot(e, slotIndex, placedWord) {
     slotIndex: slotIndex,
     startX: e.clientX,
     startY: e.clientY,
-    offsetX: centerOffset,
-    offsetY: 25,
+    offsetX,
+    offsetY,
     source: "slot",
     tempElement: true
   };
-  
   // Remove from slot but DON'T re-render yet (keeps bank word hidden)
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
   renderSlots(levels[currentLevelIndex]);
-  renderConnections(levels[currentLevelIndex]);
   updateHints();
-  
+  // Do NOT call renderConnections here
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", onDragEnd);
 }
@@ -403,6 +401,7 @@ function onDragMove(e) {
   
   gameState.draggedElement.style.left = x + "px";
   gameState.draggedElement.style.top = y + "px";
+  // Do NOT call renderGame or renderConnections here
 }
 
 function onDragEnd(e) {
@@ -620,6 +619,12 @@ function setupEditorListeners() {
 }
 
 function renderEditor() {
+  const level = levels[currentLevelIndex];
+  renderSlots(level);
+  renderBank(level);
+  updateHints();
+  setTimeout(() => renderConnections(level), 0);
+  
   // Render slots
   const slotsList = document.getElementById("editor-slots-list");
   slotsList.innerHTML = "";
