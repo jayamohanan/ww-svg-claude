@@ -344,6 +344,63 @@ body {
   background: #e68900;
 }
 
+/* Editor container and controls */
+#editor-container {
+  display: none;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #f5f5f5;
+  z-index: 100;
+}
+
+#editor-container[style*="block"] {
+  display: flex !important;
+}
+
+#editor-controls {
+  min-width: 220px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin-right: 20px;
+  height: fit-content;
+}
+
+#editor-game-view {
+  width: 420px;
+  height: 90vh;
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#editor-word-slots-area {
+  width: 100%;
+  height: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+#editor-word-bank-area {
+  width: 100%;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 /* Utility Classes */
 .hidden {
   display: none !important;

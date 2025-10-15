@@ -550,138 +550,120 @@ let editorLevel = {
 };
 
 function showEditor() {
-  document.getElementById("editor-screen").classList.remove("hidden");
-  document.getElementById("game-container").style.display = "none";
-  
-  setupEditorListeners();
-  renderEditor();
+  // Hide old game and editor screens
+  const gameContainer = document.getElementById("game-container");
+  if (gameContainer) gameContainer.style.display = "none";
+  const editorScreen = document.getElementById("editor-screen");
+  if (editorScreen) editorScreen.style.display = "none";
+  // Show new editor container
+  const editorContainer = document.getElementById("editor-container");
+  if (editorContainer) editorContainer.style.display = "block";
+  setupNewEditorListeners();
+  renderEditorGameView();
 }
 
-function setupEditorListeners() {
-  document.getElementById("editor-add-slot").addEventListener("click", () => {
-    const input = document.getElementById("editor-slot-input");
-    const word = input.value.trim().toUpperCase();
-    if (word) {
-      editorLevel.slots.push(word);
-      input.value = "";
-      renderEditor();
-    }
-  });
-  
-  document.getElementById("editor-add-bank").addEventListener("click", () => {
-    const input = document.getElementById("editor-bank-input");
+function setupNewEditorListeners() {
+  document.getElementById("editor-add-word").onclick = () => {
+    const input = document.getElementById("editor-word-input");
     const word = input.value.trim().toUpperCase();
     if (word) {
       editorLevel.bank.push(word);
+      editorLevel.slots.push(word);
       input.value = "";
-      renderEditor();
+      renderEditorGameView();
     }
-  });
-  
-  document.getElementById("editor-add-conn").addEventListener("click", () => {
+  };
+  document.getElementById("editor-add-conn").onclick = () => {
     const input = document.getElementById("editor-conn-input");
     const conn = input.value.trim();
     if (conn && /^\d{3},\d{3}$/.test(conn)) {
       editorLevel.connections.push(conn);
       input.value = "";
-      renderEditor();
+      renderEditorGameView();
     }
-  });
-  
-  document.getElementById("editor-save").addEventListener("click", () => {
-    if (editorLevel.slots.length > 0 && editorLevel.bank.length > 0) {
-      levels.push({
-        slots: [...editorLevel.slots],
-        bank: [...editorLevel.bank],
-        connections: [...editorLevel.connections]
-      });
-      saveLevels();
-      alert("Level saved successfully!");
-      
-      // Reset editor
-      editorLevel = { slots: [], bank: [], connections: [] };
-      renderEditor();
-    } else {
-      alert("Please add at least one slot and one bank word.");
-    }
-  });
-  
-  document.getElementById("editor-exit").addEventListener("click", () => {
-    window.location.href = window.location.pathname;
-  });
+  };
+  document.getElementById("editor-redraw-lines").onclick = () => {
+    renderEditorConnections();
+  };
+  document.getElementById("editor-shuffle-bank").onclick = () => {
+    editorLevel.bank = shuffleArray(editorLevel.bank);
+    renderEditorGameView();
+  };
+  document.getElementById("editor-save").onclick = () => {
+    saveLevels();
+    alert("Level saved!");
+  };
+  document.getElementById("editor-exit").onclick = () => {
+    window.location.href = "index.html";
+  };
 }
 
-function renderEditor() {
-  const level = levels[currentLevelIndex];
-  renderSlots(level);
-  renderBank(level);
-  updateHints();
-  // Remove automatic redraw of connections
-  // Add redraw button if not present
-  let redrawBtn = document.getElementById('redraw-lines-btn');
-  if (!redrawBtn) {
-    redrawBtn = document.createElement('button');
-    redrawBtn.id = 'redraw-lines-btn';
-    redrawBtn.textContent = 'Redraw Lines';
-    redrawBtn.style.position = 'absolute';
-    redrawBtn.style.top = '10px';
-    redrawBtn.style.right = '10px';
-    redrawBtn.style.zIndex = '10';
-    redrawBtn.onclick = () => renderConnections(level);
-    document.getElementById('game-container').appendChild(redrawBtn);
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  
-  // Render slots
-  const slotsList = document.getElementById("editor-slots-list");
-  slotsList.innerHTML = "";
-  editorLevel.slots.forEach((word, index) => {
-    const item = document.createElement("div");
-    item.className = "editor-item";
-    item.innerHTML = `
-      <span>Slot ${index}: ${word}</span>
-      <button class="remove-btn" data-type="slot" data-index="${index}">×</button>
-    `;
-    slotsList.appendChild(item);
+  return arr;
+}
+
+function renderEditorGameView() {
+  const slotsContainer = document.getElementById("editor-word-slots");
+  if (!slotsContainer) return;
+  slotsContainer.innerHTML = "";
+  editorLevel.slots.forEach((slotWord, slotIndex) => {
+    const slotDiv = document.createElement("div");
+    slotDiv.className = "word-slot";
+    slotDiv.dataset.slotIndex = slotIndex;
+    for (let i = 0; i < slotWord.length; i++) {
+      const cell = document.createElement("div");
+      cell.className = "word-cell";
+      cell.dataset.cellIndex = i;
+      slotDiv.appendChild(cell);
+    }
+    slotsContainer.appendChild(slotDiv);
   });
-  
-  // Render bank
-  const bankList = document.getElementById("editor-bank-list");
-  bankList.innerHTML = "";
-  editorLevel.bank.forEach((word, index) => {
-    const item = document.createElement("div");
-    item.className = "editor-item";
-    item.innerHTML = `
-      <span>${word}</span>
-      <button class="remove-btn" data-type="bank" data-index="${index}">×</button>
-    `;
-    bankList.appendChild(item);
+  // Render bank words
+  const bankContainer = document.getElementById("editor-word-bank");
+  if (!bankContainer) return;
+  bankContainer.innerHTML = "";
+  editorLevel.bank.forEach((word, bankIndex) => {
+    const wordDiv = document.createElement("div");
+    wordDiv.className = "bank-word";
+    wordDiv.textContent = word;
+    bankContainer.appendChild(wordDiv);
   });
+  renderEditorConnections();
+}
+
+function renderEditorConnections() {
+  const svg = document.getElementById("editor-svg-connections");
+  svg.innerHTML = "";
   
-  // Render connections
-  const connList = document.getElementById("editor-conn-list");
-  connList.innerHTML = "";
-  editorLevel.connections.forEach((conn, index) => {
-    const item = document.createElement("div");
-    item.className = "editor-item";
-    item.innerHTML = `
-      <span>${conn}</span>
-      <button class="remove-btn" data-type="conn" data-index="${index}">×</button>
-    `;
-    connList.appendChild(item);
-  });
+  const container = document.getElementById("editor-container");
+  const rect = container.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+  svg.setAttribute("width", rect.width);
+  svg.setAttribute("height", rect.height);
   
-  // Add remove listeners
-  document.querySelectorAll(".remove-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const type = e.target.dataset.type;
-      const index = parseInt(e.target.dataset.index);
-      
-      if (type === "slot") editorLevel.slots.splice(index, 1);
-      else if (type === "bank") editorLevel.bank.splice(index, 1);
-      else if (type === "conn") editorLevel.connections.splice(index, 1);
-      
-      renderEditor();
-    });
+  editorLevel.connections.forEach(conn => {
+    const [from, to] = conn.split(",");
+    const fromPos = parseCellPosition(from);
+    const toPos = parseCellPosition(to);
+    
+    const p1 = getCellSideCenter(fromPos.slotIndex, fromPos.cellIndex, fromPos.side);
+    const p2 = getCellSideCenter(toPos.slotIndex, toPos.cellIndex, toPos.side);
+    
+    if (p1 && p2) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x);
+      line.setAttribute("y1", p1.y);
+      line.setAttribute("x2", p2.x);
+      line.setAttribute("y2", p2.y);
+      line.setAttribute("stroke", "#333");
+      line.setAttribute("stroke-width", "2");
+      line.setAttribute("stroke-linecap", "round");
+      svg.appendChild(line);
+    }
   });
 }
 
