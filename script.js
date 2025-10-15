@@ -1,3 +1,10 @@
+function startLevel(index) {
+  currentLevelIndex = index;
+  gameState.placedWords = [];
+  renderGame._connectionsDrawn = false;
+  renderGame();
+  document.getElementById("success-screen").classList.add("hidden");
+}
 function saveLevels() {
   // Saving to file is not possible from browser JS, so just show JSON for manual copy-paste
   showEditorLevelJSON();
@@ -11,7 +18,7 @@ function setupNewEditorListeners() {
       editorLevel.slots.push(word);
       input.value = "";
       renderEditorGameView();
-    }
+  // ...existing code...
   };
   document.getElementById("editor-add-conn").onclick = () => {
     const input = document.getElementById("editor-conn-input");
@@ -52,117 +59,122 @@ function init() {
   console.log('Init called, isEditor:', isEditor);
   loadLevels();
   if (isEditor) {
-    console.log('Showing editor...');
-    showEditor();
-  } else {
-    startLevel(currentLevelIndex);
-    setupEventListeners();
-  }
-}
-// ============================
-// GAME STATE & CONFIGURATION
-// ============================
+    // ============================
+    // GAME STATE & CONFIGURATION
+    // ============================
+    let levels = [];
+    let currentLevelIndex = 0;
+    let gameState = {
+      placedWords: [], // Array of {word, slotIndex, bankIndex}
+      draggedElement: null,
+      dragData: null
+    };
+    const isEditor = window.location.search.includes("editor=true");
+    let editorLevel = {
+      slots: [],
+      bank: [],
+      connections: []
+    };
 
-// ...existing code...
-
-function loadLevels() {
-  fetch('levels.json')
-    .then(function(response) {
-      if (response.ok) {
-        return response.json();
+    function init() {
+      console.log('Init called, isEditor:', isEditor);
+      loadLevels();
+      if (isEditor) {
+        console.log('Showing editor...');
+        showEditor();
       } else {
-        console.error('Could not load levels.json');
-        return [];
+        startLevel(currentLevelIndex);
+        setupEventListeners();
       }
-    })
-    .then(function(data) {
-      levels = data;
-    })
-    .catch(function(e) {
-      levels = [];
-      console.error('Error loading levels.json:', e);
-    });
-// ...existing code...
-  document.getElementById("success-screen").classList.add("hidden");
-}
+    }
 
-function renderGame() {
-  const level = levels[currentLevelIndex];
-  renderSlots(level);
-  renderBank(level);
-  updateHints();
-  // Draw connections only once after slots are rendered
-  if (!renderGame._connectionsDrawn && !isEditorMode()) {
-    renderConnections(level);
-    renderGame._connectionsDrawn = true;
-  }
-}
+    function loadLevels() {
+      fetch('levels.json')
+        .then(function(response) {
+          if (response.ok) {
+            return response.json();
+          } else {
+            console.error('Could not load levels.json');
+            return [];
+          }
+        })
+        .then(function(data) {
+          levels = data;
+        })
+        .catch(function(e) {
+          levels = [];
+          console.error('Error loading levels.json:', e);
+        });
+    }
 
-function renderSlots(level) {
-  const slotsContainer = document.getElementById("word-slots");
-  slotsContainer.innerHTML = "";
-  
-  level.slots.forEach((slotWord, slotIndex) => {
-    const slotDiv = document.createElement("div");
-    slotDiv.className = "word-slot";
-    slotDiv.dataset.slotIndex = slotIndex;
-    
-    const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
-    
-    for (let i = 0; i < slotWord.length; i++) {
-      const cell = document.createElement("div");
-      cell.className = "word-cell";
-      cell.dataset.cellIndex = i;
-      
-      if (placedWord) {
-        cell.textContent = placedWord.word[i];
-        cell.classList.add("filled");
+    function startLevel(index) {
+      currentLevelIndex = index;
+      gameState.placedWords = [];
+      renderGame._connectionsDrawn = false;
+      renderGame();
+      document.getElementById("success-screen").classList.add("hidden");
+    }
+
+    function saveLevels() {
+      // Saving to file is not possible from browser JS, so just show JSON for manual copy-paste
+      showEditorLevelJSON();
+    }
+
+    function setupNewEditorListeners() {
+      document.getElementById("editor-add-word").onclick = () => {
+        const input = document.getElementById("editor-word-input");
+        const word = input.value.trim().toUpperCase();
+        if (word) {
+          editorLevel.bank.push(word);
+          editorLevel.slots.push(word);
+          input.value = "";
+          renderEditorGameView();
+        }
+      };
+      document.getElementById("editor-add-conn").onclick = () => {
+        const input = document.getElementById("editor-conn-input");
+        const conn = input.value.trim();
+        if (conn && /^\d{3},\d{3}$/.test(conn)) {
+          editorLevel.connections.push(conn);
+          input.value = "";
+          renderEditorGameView();
+        }
+      };
+      document.getElementById("editor-redraw-lines").onclick = () => {
+        renderEditorConnections();
+      };
+      document.getElementById("editor-shuffle-bank").onclick = () => {
+        editorLevel.bank = shuffleArray(editorLevel.bank);
+        renderEditorGameView();
+      };
+      document.getElementById("editor-save").onclick = () => {
+        saveLevels();
+      };
+      document.getElementById("editor-exit").onclick = () => {
+        window.location.href = "index.html";
+      };
+      // Add button to show JSON
+      let jsonBtn = document.getElementById("editor-show-json");
+      if (!jsonBtn) {
+        jsonBtn = document.createElement("button");
+        jsonBtn.id = "editor-show-json";
+        jsonBtn.textContent = "Show Level JSON";
+        jsonBtn.style.width = "100%";
+        jsonBtn.style.marginTop = "10px";
+        document.getElementById("editor-controls").appendChild(jsonBtn);
+        jsonBtn.onclick = showEditorLevelJSON;
       }
-      
-      slotDiv.appendChild(cell);
     }
-    
-    // Allow dragging word out of slot
-    if (placedWord) {
-      slotDiv.style.cursor = "grab";
-      slotDiv.addEventListener("mousedown", (e) => startDragFromSlot(e, slotIndex, placedWord));
-    }
-    
-    slotsContainer.appendChild(slotDiv);
-  });
-}
-
-function renderBank(level) {
-  const bankContainer = document.getElementById("word-bank");
-  bankContainer.innerHTML = "";
-  
-  level.bank.forEach((word, bankIndex) => {
-    const isPlaced = gameState.placedWords.some(pw => pw.bankIndex === bankIndex);
-    
-    const wrapper = document.createElement("div");
-    wrapper.className = "bank-word-wrapper";
-    
-    const wordDiv = document.createElement("div");
-    wordDiv.className = "bank-word";
-    wordDiv.dataset.bankIndex = bankIndex;
-    wordDiv.dataset.word = word;
-    wordDiv.style.position = "absolute";
-    wordDiv.style.left = "50%";
-    wordDiv.style.transform = "translateX(-50%)";
-    
     if (isPlaced) {
       wordDiv.classList.add("hidden");
     }
-    
     for (let i = 0; i < word.length; i++) {
       const letter = document.createElement("span");
       letter.className = "bank-letter";
       letter.textContent = word[i];
       wordDiv.appendChild(letter);
     }
-    
     wordDiv.addEventListener("mousedown", (e) => startDragFromBank(e, word, bankIndex));
-    
     wrapper.appendChild(wordDiv);
     bankContainer.appendChild(wrapper);
   });
