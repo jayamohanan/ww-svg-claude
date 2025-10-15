@@ -30,7 +30,6 @@ function init() {
     console.log('Showing editor...');
     showEditor();
   } else {
-    startLevel(currentLevelIndex);
     setupEventListeners();
   }
 }
