@@ -145,25 +145,36 @@ function renderConnections(level) {
   const svg = document.getElementById("svg-connections");
   svg.innerHTML = "";
   
-  level.connections.forEach(conn => {
-    const [from, to] = conn.split(",");
-    const fromPos = parseCellPosition(from);
-    const toPos = parseCellPosition(to);
-    
-    const p1 = getCellSideCenter(fromPos.slotIndex, fromPos.cellIndex, fromPos.side);
-    const p2 = getCellSideCenter(toPos.slotIndex, toPos.cellIndex, toPos.side);
-    
-    if (p1 && p2) {
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", p1.x);
-      line.setAttribute("y1", p1.y);
-      line.setAttribute("x2", p2.x);
-      line.setAttribute("y2", p2.y);
-      line.setAttribute("stroke", "#2196f3");
-      line.setAttribute("stroke-width", "3");
-      svg.appendChild(line);
-    }
-  });
+  // Set SVG viewBox to match container
+  const container = document.getElementById("game-container");
+  const rect = container.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+  svg.setAttribute("width", rect.width);
+  svg.setAttribute("height", rect.height);
+  
+  // Wait for DOM to render
+  setTimeout(() => {
+    level.connections.forEach(conn => {
+      const [from, to] = conn.split(",");
+      const fromPos = parseCellPosition(from);
+      const toPos = parseCellPosition(to);
+      
+      const p1 = getCellSideCenter(fromPos.slotIndex, fromPos.cellIndex, fromPos.side);
+      const p2 = getCellSideCenter(toPos.slotIndex, toPos.cellIndex, toPos.side);
+      
+      if (p1 && p2) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", p1.x);
+        line.setAttribute("y1", p1.y);
+        line.setAttribute("x2", p2.x);
+        line.setAttribute("y2", p2.y);
+        line.setAttribute("stroke", "#2196f3");
+        line.setAttribute("stroke-width", "4");
+        line.setAttribute("stroke-linecap", "round");
+        svg.appendChild(line);
+      }
+    });
+  }, 50);
 }
 
 function parseCellPosition(str) {
@@ -182,15 +193,21 @@ function getCellSideCenter(slotIndex, cellIndex, side) {
   if (!cell) return null;
   
   const rect = cell.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
+  const containerRect = document.getElementById("game-container").getBoundingClientRect();
+  
+  const centerX = rect.left - containerRect.left + rect.width / 2;
+  const centerY = rect.top - containerRect.top + rect.height / 2;
+  const left = rect.left - containerRect.left;
+  const right = rect.right - containerRect.left;
+  const top = rect.top - containerRect.top;
+  const bottom = rect.bottom - containerRect.top;
   
   // side: 0=top, 1=right, 2=bottom, 3=left
   switch (side) {
-    case 0: return { x: centerX, y: rect.top };
-    case 1: return { x: rect.right, y: centerY };
-    case 2: return { x: centerX, y: rect.bottom };
-    case 3: return { x: rect.left, y: centerY };
+    case 0: return { x: centerX, y: top };
+    case 1: return { x: right, y: centerY };
+    case 2: return { x: centerX, y: bottom };
+    case 3: return { x: left, y: centerY };
     default: return { x: centerX, y: centerY };
   }
 }
@@ -302,22 +319,28 @@ function startDragFromBank(e, word, bankIndex) {
   const element = e.currentTarget;
   const rect = element.getBoundingClientRect();
   
+  // Calculate offset to center of word (50px per letter with 2px gap between cells)
+  const wordWidth = word.length * 50 + (word.length - 1) * 2;
+  const centerOffset = wordWidth / 2;
+  
   gameState.draggedElement = element;
   gameState.dragData = {
     word,
     bankIndex,
     startX: e.clientX,
     startY: e.clientY,
-    offsetX: e.clientX - rect.left,
+    offsetX: centerOffset,
     offsetY: e.clientY - rect.top,
-    source: "bank"
+    source: "bank",
+    originalRect: rect
   };
   
   element.classList.add("dragging");
   element.style.position = "fixed";
-  element.style.left = (e.clientX - gameState.dragData.offsetX) + "px";
+  element.style.left = (e.clientX - centerOffset) + "px";
   element.style.top = (e.clientY - gameState.dragData.offsetY) + "px";
   element.style.zIndex = "1000";
+  element.style.transform = "none";
   
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", onDragEnd);
@@ -328,6 +351,10 @@ function startDragFromSlot(e, slotIndex, placedWord) {
   
   const slot = e.currentTarget;
   const rect = slot.getBoundingClientRect();
+  
+  // Calculate word width and center offset
+  const wordWidth = placedWord.word.length * 50 + (placedWord.word.length - 1) * 2;
+  const centerOffset = wordWidth / 2;
   
   // Create a temporary drag element
   const tempElement = document.createElement("div");
@@ -340,8 +367,8 @@ function startDragFromSlot(e, slotIndex, placedWord) {
   });
   
   tempElement.style.position = "fixed";
-  tempElement.style.left = rect.left + "px";
-  tempElement.style.top = rect.top + "px";
+  tempElement.style.left = (e.clientX - centerOffset) + "px";
+  tempElement.style.top = (e.clientY - 25) + "px";
   tempElement.style.zIndex = "1000";
   document.body.appendChild(tempElement);
   
@@ -352,8 +379,8 @@ function startDragFromSlot(e, slotIndex, placedWord) {
     slotIndex: slotIndex,
     startX: e.clientX,
     startY: e.clientY,
-    offsetX: e.clientX - rect.left,
-    offsetY: e.clientY - rect.top,
+    offsetX: centerOffset,
+    offsetY: 25,
     source: "slot",
     tempElement: true
   };
@@ -434,21 +461,20 @@ function onDragEnd(e) {
 function animateBack() {
   if (!gameState.draggedElement || !gameState.dragData) return;
   
-  const { source, bankIndex } = gameState.dragData;
+  const { source, bankIndex, originalRect } = gameState.dragData;
   
   if (source === "bank") {
-    // Animate back to bank
-    const originalElement = document.querySelector(`[data-bank-index="${bankIndex}"]`);
-    if (originalElement) {
-      const rect = originalElement.getBoundingClientRect();
-      
-      gameState.draggedElement.style.transition = "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
-      gameState.draggedElement.style.left = rect.left + "px";
-      gameState.draggedElement.style.top = rect.top + "px";
+    // Animate back to original bank position
+    if (originalRect) {
+      gameState.draggedElement.style.transition = "left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      gameState.draggedElement.style.left = originalRect.left + "px";
+      gameState.draggedElement.style.top = originalRect.top + "px";
       
       setTimeout(() => {
         cleanupDrag(true);
       }, 300);
+    } else {
+      cleanupDrag(true);
     }
   } else {
     // From slot - animate to bank position then show original
@@ -456,7 +482,7 @@ function animateBack() {
     if (originalElement) {
       const rect = originalElement.getBoundingClientRect();
       
-      gameState.draggedElement.style.transition = "all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
+      gameState.draggedElement.style.transition = "left 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
       gameState.draggedElement.style.left = rect.left + "px";
       gameState.draggedElement.style.top = rect.top + "px";
       
@@ -480,6 +506,7 @@ function cleanupDrag(success) {
       gameState.draggedElement.style.top = "";
       gameState.draggedElement.style.zIndex = "";
       gameState.draggedElement.style.transition = "";
+      gameState.draggedElement.style.transform = "";
     }
   }
   

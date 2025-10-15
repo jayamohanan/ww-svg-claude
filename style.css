@@ -35,7 +35,7 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 5;
 }
 
 /* Word Slots Area - Top 60% */
@@ -88,7 +88,7 @@ body {
 #word-bank-area {
   height: 40%;
   width: 100%;
-  background: #fff3e0;
+  background: transparent;
   display: flex;
   align-items: flex-start;
   justify-content: center;
