@@ -1,66 +1,88 @@
-// ============================
-// GAME STATE & CONFIGURATION
-// ============================
-
-const DEFAULT_LEVELS = [
-  {
-    slots: ["SOFT", "TUNE"],
-    bank: ["SOFT", "TUNE"],
-    connections: ["032,100"] // slot0, cell3, bottom -> slot1, cell0, top
+function saveLevels() {
+  // Saving to file is not possible from browser JS, so just show JSON for manual copy-paste
+  showEditorLevelJSON();
+}
+function setupNewEditorListeners() {
+  document.getElementById("editor-add-word").onclick = () => {
+    const input = document.getElementById("editor-word-input");
+    const word = input.value.trim().toUpperCase();
+    if (word) {
+      editorLevel.bank.push(word);
+      editorLevel.slots.push(word);
+      input.value = "";
+      renderEditorGameView();
+    }
+  };
+  document.getElementById("editor-add-conn").onclick = () => {
+    const input = document.getElementById("editor-conn-input");
+    const conn = input.value.trim();
+    if (conn && /^\d{3},\d{3}$/.test(conn)) {
+      editorLevel.connections.push(conn);
+      input.value = "";
+      renderEditorGameView();
+    }
+  };
+  document.getElementById("editor-redraw-lines").onclick = () => {
+    renderEditorConnections();
+  };
+  document.getElementById("editor-shuffle-bank").onclick = () => {
+    editorLevel.bank = shuffleArray(editorLevel.bank);
+    renderEditorGameView();
+  };
+  document.getElementById("editor-save").onclick = () => {
+    saveLevels();
+  };
+  document.getElementById("editor-exit").onclick = () => {
+    window.location.href = "index.html";
+  };
+  // Add button to show JSON
+  let jsonBtn = document.getElementById("editor-show-json");
+  if (!jsonBtn) {
+    jsonBtn = document.createElement("button");
+    jsonBtn.id = "editor-show-json";
+    jsonBtn.textContent = "Show Level JSON";
+    jsonBtn.style.width = "100%";
+    jsonBtn.style.marginTop = "10px";
+    document.getElementById("editor-controls").appendChild(jsonBtn);
+    jsonBtn.onclick = showEditorLevelJSON;
   }
-];
-
-let levels = [];
-let currentLevelIndex = 0;
-let gameState = {
-  placedWords: [], // Array of {word, slotIndex, bankIndex}
-  draggedElement: null,
-  dragData: null
-};
-
+}
 const isEditor = window.location.search.includes("editor=true");
-
-// ============================
-// INITIALIZATION
-// ============================
-
 function init() {
+  console.log('Init called, isEditor:', isEditor);
   loadLevels();
-  
   if (isEditor) {
+    console.log('Showing editor...');
     showEditor();
   } else {
     startLevel(currentLevelIndex);
     setupEventListeners();
   }
 }
+// ============================
+// GAME STATE & CONFIGURATION
+// ============================
+
+// ...existing code...
 
 function loadLevels() {
-  const saved = localStorage.getItem("word_web_levels");
-  if (saved) {
-    try {
-      levels = JSON.parse(saved);
-    } catch (e) {
-      levels = [...DEFAULT_LEVELS];
-    }
-  } else {
-    levels = [...DEFAULT_LEVELS];
-  }
-}
-
-function saveLevels() {
-  localStorage.setItem("word_web_levels", JSON.stringify(levels));
-}
-
-// ============================
-// GAME LOGIC
-// ============================
-
-function startLevel(index) {
-  currentLevelIndex = index;
-  gameState.placedWords = [];
-  renderGame._connectionsDrawn = false;
-  renderGame();
+  fetch('levels.json')
+    .then(function(response) {
+      if (response.ok) {
+        return response.json();
+      } else {
+        console.error('Could not load levels.json');
+        return [];
+      }
+    })
+    .then(function(data) {
+      levels = data;
+    })
+    .catch(function(e) {
+      levels = [];
+      console.error('Error loading levels.json:', e);
+    });
+// ...existing code...
   document.getElementById("success-screen").classList.add("hidden");
 }
 
@@ -550,19 +572,24 @@ let editorLevel = {
 };
 
 function showEditor() {
+  console.log('showEditor called');
   // Hide old game and editor screens
   const gameContainer = document.getElementById("game-container");
+  console.log('gameContainer:', gameContainer);
   if (gameContainer) gameContainer.style.display = "none";
   const editorScreen = document.getElementById("editor-screen");
   if (editorScreen) editorScreen.style.display = "none";
   // Show new editor container
   const editorContainer = document.getElementById("editor-container");
-  if (editorContainer) editorContainer.style.display = "block";
+  console.log('editorContainer:', editorContainer);
+  if (editorContainer) {
+    editorContainer.classList.add('show');
+    console.log('Editor container show class added');
+  }
   setupNewEditorListeners();
   renderEditorGameView();
 }
 
-function setupNewEditorListeners() {
   document.getElementById("editor-add-word").onclick = () => {
     const input = document.getElementById("editor-word-input");
     const word = input.value.trim().toUpperCase();
@@ -591,12 +618,36 @@ function setupNewEditorListeners() {
   };
   document.getElementById("editor-save").onclick = () => {
     saveLevels();
-    alert("Level saved!");
   };
   document.getElementById("editor-exit").onclick = () => {
     window.location.href = "index.html";
   };
+  // Add button to show JSON
+  let jsonBtn = document.getElementById("editor-show-json");
+  if (!jsonBtn) {
+    jsonBtn = document.createElement("button");
+    jsonBtn.id = "editor-show-json";
+    jsonBtn.textContent = "Show Level JSON";
+    jsonBtn.style.width = "100%";
+    jsonBtn.style.marginTop = "10px";
+    document.getElementById("editor-controls").appendChild(jsonBtn);
+    jsonBtn.onclick = showEditorLevelJSON;
+  }
+
+function showEditorLevelJSON() {
+  let jsonArea = document.getElementById("editor-json-area");
+  if (!jsonArea) {
+    jsonArea = document.createElement("textarea");
+    jsonArea.id = "editor-json-area";
+    jsonArea.style.width = "100%";
+    jsonArea.style.height = "120px";
+    jsonArea.style.marginTop = "10px";
+    document.getElementById("editor-controls").appendChild(jsonArea);
+  }
+  jsonArea.value = JSON.stringify(editorLevel, null, 2);
+  jsonArea.select();
 }
+
 
 function shuffleArray(arr) {
   for (let i = arr.length - 1; i > 0; i--) {

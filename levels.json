@@ -1,0 +1,20 @@
+[
+  {
+    "slots": ["SOFT", "TUNE"],
+    "bank": ["SOFT", "TUNE"],
+    "connections": ["032,100"]
+  },
+  {
+  "slots": [
+    "NEWS",
+    "WEST"
+  ],
+  "bank": [
+    "NEWS",
+    "WEST"
+  ],
+  "connections": [
+    "022,100"
+  ]
+} 
+]

@@ -29,32 +29,31 @@
       <h2>Level Complete! 🎉</h2>
       <button id="next-btn" class="control-btn">Next Level</button>
     </div>
-    
-    <!-- Level Editor -->
-    <div id="editor-container" style="display:none; height:100vh; width:100vw; position:fixed; top:0; left:0; background:#f5f5f5; z-index:100;">
-      <div id="editor-controls" style="position:absolute; left:20px; top:40px; width:220px;">
-        <h2>Level Editor</h2>
-        <input id="editor-word-input" type="text" placeholder="Enter word (e.g., VIEW)" maxlength="12" style="width:180px;">
-        <button id="editor-add-word">Add Word</button>
-        <br><br>
-        <input id="editor-conn-input" type="text" placeholder="Connection (e.g., 003,100)" maxlength="7" style="width:180px;">
-        <button id="editor-add-conn">Add Connection</button>
-        <br><br>
-        <button id="editor-redraw-lines">Redraw Lines</button>
-        <br><br>
-        <button id="editor-shuffle-bank">Shuffle Bank</button>
-        <br><br>
-        <button id="editor-save">Save Level</button>
-        <button id="editor-exit">Exit Editor</button>
+  </div>
+  
+  <!-- Level Editor -->
+  <div id="editor-container">
+    <div id="editor-controls">
+      <h2>Level Editor</h2>
+      <input id="editor-word-input" type="text" placeholder="Enter word (e.g., VIEW)" maxlength="12" style="width:100%; margin-bottom:10px;">
+      <button id="editor-add-word" style="width:100%; margin-bottom:10px;">Add Word</button>
+      <br>
+      <input id="editor-conn-input" type="text" placeholder="Connection (e.g., 003,100)" maxlength="7" style="width:100%; margin-bottom:10px;">
+      <button id="editor-add-conn" style="width:100%; margin-bottom:10px;">Add Connection</button>
+      <br>
+      <button id="editor-redraw-lines" style="width:100%; margin-bottom:10px;">Redraw Lines</button>
+      <button id="editor-shuffle-bank" style="width:100%; margin-bottom:10px;">Shuffle Bank</button>
+      <br>
+      <button id="editor-save" style="width:100%; margin-bottom:10px;">Save Level</button>
+      <button id="editor-exit" style="width:100%;">Exit Editor</button>
+    </div>
+    <div id="editor-game-view">
+      <svg id="editor-svg-connections"></svg>
+      <div id="editor-word-slots-area">
+        <div id="editor-word-slots"></div>
       </div>
-      <div id="editor-game-view" style="margin-left:260px; width:420px; height:90vh; position:relative; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-        <svg id="editor-svg-connections" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></svg>
-        <div id="editor-word-slots-area" style="position:absolute; top:0; left:0; width:100%; height:60%;">
-          <div id="editor-word-slots"></div>
-        </div>
-        <div id="editor-word-bank-area" style="position:absolute; bottom:0; left:0; width:100%; height:40%;">
-          <div id="editor-word-bank"></div>
-        </div>
+      <div id="editor-word-bank-area">
+        <div id="editor-word-bank"></div>
       </div>
     </div>
   </div>
