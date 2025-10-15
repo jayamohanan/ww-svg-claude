@@ -16,5 +16,18 @@
   "connections": [
     "022,100"
   ]
-} 
+},
+{
+  "slots": [
+    "MISS",
+    "SOAK"
+  ],
+  "bank": [
+    "MISS",
+    "SOAK"
+  ],
+  "connections": [
+    "032,100"
+  ]
+}
 ]
