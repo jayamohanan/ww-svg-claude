@@ -374,7 +374,7 @@ function startDragFromBankTouch(e, word, bankIndex) {
 function startDragFromSlotTouch(e, slotIndex, placedWord) {
   e.preventDefault();
   const coords = getTouchCoords(e);
-  const slot = e.currentTarget;
+  const slotElem = e.currentTarget;
   const rect = slot.getBoundingClientRect();
   const offsetX = coords.clientX - rect.left;
   const offsetY = coords.clientY - rect.top;
@@ -403,10 +403,18 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
-  // Remove from slot and immediately update UI so slot and hints are cleared
+  // Remove from slot in state
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-  renderSlots(levels[currentLevelIndex]);
-  updateHints();
+  // Clear slot cells and hints visually (without destroying slot DOM)
+  const slotDom = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+  if (slotDom) {
+    slotDom.querySelectorAll('.word-cell').forEach(cell => {
+      cell.textContent = '';
+      cell.classList.remove('filled', 'hint');
+    });
+  }
+  // Remove all hints (since updateHints will run after drop)
+  document.querySelectorAll('.word-cell.hint').forEach(cell => cell.classList.remove('hint'));
   document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
   document.addEventListener("touchend", onDragEndTouch);
 }
