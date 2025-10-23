@@ -148,12 +148,13 @@ function renderBank(level) {
       wordDiv.classList.add("hidden");
     }
     
-    for (let i = 0; i < word.length; i++) {
-      const letter = document.createElement("span");
-      letter.className = "bank-letter";
-      letter.textContent = word[i];
-      wordDiv.appendChild(letter);
-    }
+      // Render as a row of .bank-letter squares (like .word-cell)
+      for (let i = 0; i < word.length; i++) {
+        const cell = document.createElement("span");
+        cell.className = "bank-letter";
+        cell.textContent = word[i];
+        wordDiv.appendChild(cell);
+      }
     
     wordDiv.addEventListener("mousedown", (e) => startDragFromBank(e, word, bankIndex));
     wordDiv.addEventListener("touchstart", (e) => startDragFromBankTouch(e, word, bankIndex));
