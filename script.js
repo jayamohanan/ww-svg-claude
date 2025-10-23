@@ -403,10 +403,13 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
-  // Remove from slot and re-render slots/hints (same as desktop)
+  // Remove from slot and re-render slots/hints (deferred to avoid canceling touch)
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-  renderSlots(levels[currentLevelIndex]);
-  updateHints();
+  // Defer rendering to next frame so touch drag can start properly
+  requestAnimationFrame(() => {
+    renderSlots(levels[currentLevelIndex]);
+    updateHints();
+  });
   document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
   document.addEventListener("touchend", onDragEndTouch);
 }
