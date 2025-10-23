@@ -211,10 +211,11 @@ body {
 }
 
 /* Red Cross Error Animation */
+
 .error-cross {
   position: fixed;
-  width: 60px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
   pointer-events: none;
   z-index: 2000;
   animation: error-fade 0.7s ease-out;
@@ -227,7 +228,7 @@ body {
   }
   50% {
     opacity: 1;
-    transform: scale(1.2);
+    transform: scale(1.0);
   }
   100% {
     opacity: 0;

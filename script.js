@@ -306,37 +306,33 @@ function checkConstraints(word, slotIndex) {
   
   // Check word length
   if (word.length !== slotLength) {
-    return false;
+    return { valid: false, reason: 'length' };
   }
-  
-  // Check connection constraints
+  // Check connection constraints and hint mismatches
   for (const conn of level.connections) {
     const [from, to] = conn.split(",");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
-    
     // If placing in fromPos slot, check against toPos slot
     if (fromPos.slotIndex === slotIndex) {
       const toPlaced = gameState.placedWords.find(pw => pw.slotIndex === toPos.slotIndex);
       if (toPlaced) {
         if (word[fromPos.cellIndex] !== toPlaced.word[toPos.cellIndex]) {
-          return false;
+          return { valid: false, reason: 'hint', cellIndex: fromPos.cellIndex };
         }
       }
     }
-    
     // If placing in toPos slot, check against fromPos slot
     if (toPos.slotIndex === slotIndex) {
       const fromPlaced = gameState.placedWords.find(pw => pw.slotIndex === fromPos.slotIndex);
       if (fromPlaced) {
         if (word[toPos.cellIndex] !== fromPlaced.word[fromPos.cellIndex]) {
-          return false;
+          return { valid: false, reason: 'hint', cellIndex: toPos.cellIndex };
         }
       }
     }
   }
-  
-  return true;
+  return { valid: true };
 }
 
 function placeWord(word, slotIndex, bankIndex) {
@@ -472,7 +468,8 @@ function onDragEndTouch(e) {
       coords.clientY <= rect.bottom
     ) {
       droppedOnSlot = true;
-      if (checkConstraints(word, index)) {
+      const result = checkConstraints(word, index);
+      if (result.valid) {
         placeWord(word, index, bankIndex);
         if (gameState.dragData.tempElement) {
           gameState.draggedElement.remove();
@@ -487,7 +484,24 @@ function onDragEndTouch(e) {
         gameState.draggedElement = null;
         gameState.dragData = null;
       } else {
-        showError(coords.clientX, coords.clientY);
+        if (result.reason === 'length') {
+          // Show X at slot center
+          const rect = slot.getBoundingClientRect();
+          showError(rect.left + rect.width/2, rect.top + rect.height/2);
+        } else if (result.reason === 'hint') {
+          // Show X at the mismatched cell
+          const cell = slot.querySelector(`[data-cell-index="${result.cellIndex}"]`);
+          if (cell) {
+            const rect = cell.getBoundingClientRect();
+            showError(rect.left + rect.width/2, rect.top + rect.height/2);
+          } else {
+            // fallback to slot center
+            const rect = slot.getBoundingClientRect();
+            showError(rect.left + rect.width/2, rect.top + rect.height/2);
+          }
+        } else {
+          showError(coords.clientX, coords.clientY);
+        }
         animateBack();
       }
     }
@@ -604,7 +618,8 @@ function onDragEnd(e) {
     ) {
       droppedOnSlot = true;
       // Check constraints
-      if (checkConstraints(word, index)) {
+      const result = checkConstraints(word, index);
+      if (result.valid) {
         placeWord(word, index, bankIndex);
         // Always remove the ghost/dragged element
         if (gameState.draggedElement) {
@@ -617,8 +632,24 @@ function onDragEnd(e) {
         gameState.draggedElement = null;
         gameState.dragData = null;
       } else {
-        // Show error and animate back
-        showError(e.clientX, e.clientY);
+        if (result.reason === 'length') {
+          // Show X at slot center
+          const rect = slot.getBoundingClientRect();
+          showError(rect.left + rect.width/2, rect.top + rect.height/2);
+        } else if (result.reason === 'hint') {
+          // Show X at the mismatched cell
+          const cell = slot.querySelector(`[data-cell-index="${result.cellIndex}"]`);
+          if (cell) {
+            const rect = cell.getBoundingClientRect();
+            showError(rect.left + rect.width/2, rect.top + rect.height/2);
+          } else {
+            // fallback to slot center
+            const rect = slot.getBoundingClientRect();
+            showError(rect.left + rect.width/2, rect.top + rect.height/2);
+          }
+        } else {
+          showError(e.clientX, e.clientY);
+        }
         animateBack();
       }
     }
@@ -696,13 +727,13 @@ function showError(x, y) {
   const cross = document.createElement("div");
   cross.className = "error-cross";
   cross.innerHTML = `
-    <svg width="60" height="60" viewBox="0 0 60 60">
-      <line x1="10" y1="10" x2="50" y2="50" stroke="#f44336" stroke-width="6" stroke-linecap="round"/>
-      <line x1="50" y1="10" x2="10" y2="50" stroke="#f44336" stroke-width="6" stroke-linecap="round"/>
+    <svg width="40" height="40" viewBox="0 0 40 40">
+      <line x1="8" y1="8" x2="32" y2="32" stroke="#f44336" stroke-width="4" stroke-linecap="round"/>
+      <line x1="32" y1="8" x2="8" y2="32" stroke="#f44336" stroke-width="4" stroke-linecap="round"/>
     </svg>
   `;
-  cross.style.left = (x - 30) + "px";
-  cross.style.top = (y - 30) + "px";
+  cross.style.left = (x - 20) + "px";
+  cross.style.top = (y - 20) + "px";
   document.body.appendChild(cross);
   
   setTimeout(() => cross.remove(), 700);
