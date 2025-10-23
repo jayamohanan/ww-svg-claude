@@ -403,9 +403,9 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
+  // Remove from slot but DON'T re-render yet (keeps bank word hidden)
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-  renderSlots(levels[currentLevelIndex]);
-  updateHints();
+  // Do NOT call renderSlots or updateHints here; wait until drag ends
   document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
   document.addEventListener("touchend", onDragEndTouch);
 }
