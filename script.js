@@ -403,18 +403,10 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
-  // Remove from slot in state
+  // Remove from slot and re-render slots/hints (same as desktop)
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-  // Clear slot cells and hints visually (without destroying slot DOM)
-  const slotDom = document.querySelector(`[data-slot-index="${slotIndex}"]`);
-  if (slotDom) {
-    slotDom.querySelectorAll('.word-cell').forEach(cell => {
-      cell.textContent = '';
-      cell.classList.remove('filled', 'hint');
-    });
-  }
-  // Remove all hints (since updateHints will run after drop)
-  document.querySelectorAll('.word-cell.hint').forEach(cell => cell.classList.remove('hint'));
+  renderSlots(levels[currentLevelIndex]);
+  updateHints();
   document.addEventListener("touchmove", onDragMoveTouch, { passive: false });
   document.addEventListener("touchend", onDragEndTouch);
 }
