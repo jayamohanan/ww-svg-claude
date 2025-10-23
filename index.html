@@ -21,8 +21,19 @@
       <div id="word-bank"></div>
     </div>
     
-    <!-- Replay Button -->
-    <button id="replay-btn" class="control-btn">Replay</button>
+  <!-- Replay Button -->
+  <button id="replay-btn" class="control-btn">Replay</button>
+  <!-- Undo Button -->
+    <button id="undo-btn" class="undo-btn">
+      <span class="undo-icon" aria-label="Undo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+          <path d="M9 14L4 9l5-5"/>
+          <path d="M20 20v-7a4 4 0 00-4-4H4"/>
+        </svg>
+      </span>
+      <span class="undo-label">UNDO</span>
+      <span id="undo-count" class="undo-count"></span>
+    </button>
     
     <!-- Success Screen -->
     <div id="success-screen" class="hidden">

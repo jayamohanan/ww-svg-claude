@@ -1,3 +1,6 @@
+// Track undo state
+let undoCount = 10;
+let undoStack = [];
 // ============================
 // GAME STATE & CONFIGURATION
 // ============================
@@ -68,6 +71,18 @@ function saveLevels() {
 // ============================
 
 function startLevel(index) {
+  // Update undo count display
+  setTimeout(() => {
+    const undoCountSpan = document.getElementById("undo-count");
+    if (undoCountSpan) undoCountSpan.textContent = undoCount;
+  }, 0);
+  undoCount = 10;
+  undoStack = [];
+  const undoBtn = document.getElementById("undo-btn");
+  if (undoBtn) {
+    undoBtn.disabled = false;
+    undoBtn.classList.remove("disabled");
+  }
   currentLevelIndex = index;
   gameState.placedWords = [];
   renderGame._connectionsDrawn = false;
@@ -336,6 +351,11 @@ function checkConstraints(word, slotIndex) {
 }
 
 function placeWord(word, slotIndex, bankIndex) {
+  // Push to undo stack
+  if (undoCount > 0) {
+    undoStack.push({ word, slotIndex, bankIndex });
+    if (undoStack.length > 10) undoStack.shift();
+  }
   // Remove if already placed in this slot
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
   
@@ -744,6 +764,33 @@ function showError(x, y) {
 // ============================
 
 function setupEventListeners() {
+  const updateUndoCount = () => {
+    const undoCountSpan = document.getElementById("undo-count");
+    if (undoCountSpan) undoCountSpan.textContent = undoCount;
+  };
+  updateUndoCount();
+  // Undo button
+  const undoBtn = document.getElementById("undo-btn");
+  if (undoBtn) {
+    undoBtn.addEventListener("click", () => {
+      if (undoCount > 0 && undoStack.length > 0) {
+        const last = undoStack.pop();
+        // Remove the word from placedWords
+        gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== last.slotIndex);
+        // Decrement undo count
+        undoCount--;
+        // Disable button if no undos left
+        if (undoCount === 0) {
+          undoBtn.disabled = true;
+          undoBtn.classList.add("disabled");
+        }
+  renderSlots(levels[currentLevelIndex]);
+  renderBank(levels[currentLevelIndex]);
+  updateHints();
+  updateUndoCount();
+      }
+    });
+  }
   document.getElementById("replay-btn").addEventListener("click", () => {
     startLevel(currentLevelIndex);
   });
