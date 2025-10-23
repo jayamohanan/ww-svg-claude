@@ -375,7 +375,7 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
   e.preventDefault();
   const coords = getTouchCoords(e);
   const slotElem = e.currentTarget;
-  const rect = slot.getBoundingClientRect();
+  const rect = slotElem.getBoundingClientRect();
   const offsetX = coords.clientX - rect.left;
   const offsetY = coords.clientY - rect.top;
   const tempElement = document.createElement("div");
