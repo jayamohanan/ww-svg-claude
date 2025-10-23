@@ -145,7 +145,7 @@ function renderBank(level) {
     wordDiv.style.transform = "translateX(-50%)";
     
     if (isPlaced) {
-      wordDiv.classList.add("hidden");
+      wordDiv.classList.add("invisible");
     }
     
       // Render as a row of .bank-letter squares (like .word-cell)
@@ -156,8 +156,12 @@ function renderBank(level) {
         wordDiv.appendChild(cell);
       }
     
-    wordDiv.addEventListener("mousedown", (e) => startDragFromBank(e, word, bankIndex));
-    wordDiv.addEventListener("touchstart", (e) => startDragFromBankTouch(e, word, bankIndex));
+    wordDiv.addEventListener("mousedown", (e) => {
+      if (!wordDiv.classList.contains("invisible")) startDragFromBank(e, word, bankIndex);
+    });
+    wordDiv.addEventListener("touchstart", (e) => {
+      if (!wordDiv.classList.contains("invisible")) startDragFromBankTouch(e, word, bankIndex);
+    });
     
     wrapper.appendChild(wordDiv);
     bankContainer.appendChild(wrapper);
@@ -189,7 +193,7 @@ function renderConnections(level) {
       line.setAttribute("y1", p1.y);
       line.setAttribute("x2", p2.x);
       line.setAttribute("y2", p2.y);
-      line.setAttribute("stroke", "#333");
+  line.setAttribute("stroke", "#888");
       line.setAttribute("stroke-width", "2");
       line.setAttribute("stroke-linecap", "round");
       svg.appendChild(line);
@@ -460,15 +464,23 @@ function onDragEndTouch(e) {
 
 function startDragFromBank(e, word, bankIndex) {
   e.preventDefault();
-  
   const element = e.currentTarget;
   const rect = element.getBoundingClientRect();
-  
   // Calculate offset from mouse to top-left of word
   const offsetX = e.clientX - rect.left;
   const offsetY = e.clientY - rect.top;
-  
-  gameState.draggedElement = element;
+  // Create a ghost (clone) for dragging
+  const ghost = element.cloneNode(true);
+  ghost.classList.add("dragging");
+  ghost.style.position = "fixed";
+  ghost.style.left = (e.clientX - offsetX) + "px";
+  ghost.style.top = (e.clientY - offsetY) + "px";
+  ghost.style.zIndex = "1000";
+  ghost.style.transform = "none";
+  document.body.appendChild(ghost);
+  // Hide the original with visibility:hidden
+  element.classList.add("invisible");
+  gameState.draggedElement = ghost;
   gameState.dragData = {
     word,
     bankIndex,
@@ -477,16 +489,9 @@ function startDragFromBank(e, word, bankIndex) {
     offsetX,
     offsetY,
     source: "bank",
-    originalRect: rect
+    originalRect: rect,
+    originalElement: element
   };
-  
-  element.classList.add("dragging");
-  element.style.position = "fixed";
-  element.style.left = (e.clientX - offsetX) + "px";
-  element.style.top = (e.clientY - offsetY) + "px";
-  element.style.zIndex = "1000";
-  element.style.transform = "none";
-  
   document.addEventListener("mousemove", onDragMove);
   document.addEventListener("mouseup", onDragEnd);
 }
@@ -563,22 +568,17 @@ function onDragEnd(e) {
       e.clientY <= rect.bottom
     ) {
       droppedOnSlot = true;
-      
       // Check constraints
       if (checkConstraints(word, index)) {
         placeWord(word, index, bankIndex);
-        
-        if (gameState.dragData.tempElement) {
+        // Always remove the ghost/dragged element
+        if (gameState.draggedElement) {
           gameState.draggedElement.remove();
-        } else {
-          gameState.draggedElement.classList.remove("dragging");
-          gameState.draggedElement.style.position = "";
-          gameState.draggedElement.style.left = "";
-          gameState.draggedElement.style.top = "";
-          gameState.draggedElement.style.zIndex = "";
-          gameState.draggedElement.style.transition = "";
         }
-        
+        // Restore original bank word if needed
+        if (gameState.dragData && gameState.dragData.originalElement) {
+          gameState.dragData.originalElement.classList.remove("invisible");
+        }
         gameState.draggedElement = null;
         gameState.dragData = null;
       } else {
@@ -597,7 +597,7 @@ function onDragEnd(e) {
 
 function animateBack() {
   if (!gameState.draggedElement || !gameState.dragData) return;
-  const { source, bankIndex, originalRect } = gameState.dragData;
+  const { source, bankIndex, originalRect, originalElement } = gameState.dragData;
   // Remove dragging class and reset z-index for instant snap-back
   gameState.draggedElement.classList.remove("dragging");
   gameState.draggedElement.style.zIndex = "";
@@ -608,9 +608,13 @@ function animateBack() {
       gameState.draggedElement.style.left = originalRect.left + "px";
       gameState.draggedElement.style.top = originalRect.top + "px";
       setTimeout(() => {
+        if (originalElement) originalElement.classList.remove("invisible");
+        if (gameState.draggedElement) gameState.draggedElement.remove();
         cleanupDrag(true);
       }, 100);
     } else {
+      if (originalElement) originalElement.classList.remove("invisible");
+      if (gameState.draggedElement) gameState.draggedElement.remove();
       cleanupDrag(true);
     }
   } else {
@@ -622,9 +626,11 @@ function animateBack() {
       gameState.draggedElement.style.left = rect.left + "px";
       gameState.draggedElement.style.top = rect.top + "px";
       setTimeout(() => {
+        if (gameState.draggedElement) gameState.draggedElement.remove();
         cleanupDrag(true);
       }, 100);
     } else {
+      if (gameState.draggedElement) gameState.draggedElement.remove();
       cleanupDrag(true);
     }
   }
@@ -826,7 +832,7 @@ function renderEditorConnections() {
       line.setAttribute("y1", p1.y);
       line.setAttribute("x2", p2.x);
       line.setAttribute("y2", p2.y);
-      line.setAttribute("stroke", "#333");
+  line.setAttribute("stroke", "#888");
       line.setAttribute("stroke-width", "2");
       line.setAttribute("stroke-linecap", "round");
       svg.appendChild(line);
