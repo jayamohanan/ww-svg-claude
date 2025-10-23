@@ -123,19 +123,19 @@ body {
 .word-slot {
   display: flex;
   flex-direction: row;
-  gap: 2px;
+  gap: 1px;
   position: relative;
 }
 
 .word-cell {
-  width: 50px;
-  height: 50px;
+  width: 35px;
+  height: 35px;
   border: 2px solid #888;
   background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 20px;
   font-weight: bold;
   color: #333;
   border-radius: 6px;
@@ -183,7 +183,7 @@ body {
   user-select: none;
   transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   position: relative;
-  gap: 2px;
+  gap: 1px;
 }
 
 .bank-word.dragging {
@@ -198,11 +198,11 @@ body {
 }
 
 .bank-letter {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: bold;
   color: #333;
-  width: 50px;
-  height: 50px;
+  width: 35px;
+  height: 35px;
   text-align: center;
   display: flex;
   align-items: center;
@@ -265,9 +265,9 @@ body {
 }
 
 #success-screen h2 {
-  font-size: 48px;
-  color: #4caf50;
-  margin-bottom: 30px;
+  font-size: 20px;
+  width: 35px;
+  height: 35px;
 }
 
 /* Red Cross Error Animation */
