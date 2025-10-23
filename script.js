@@ -91,37 +91,58 @@ function renderGame() {
   }
 }
 
-function renderSlots(level) {
+
+// Only create slot DOM elements once per level load
+function renderSlots(level, force = false) {
   const slotsContainer = document.getElementById("word-slots");
+  // If slots already exist and not forced, just update content
+  if (slotsContainer.children.length === level.slots.length && !force) {
+    for (let slotIndex = 0; slotIndex < level.slots.length; slotIndex++) {
+      const slotDiv = slotsContainer.children[slotIndex];
+      const slotWord = level.slots[slotIndex];
+      const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
+      for (let i = 0; i < slotWord.length; i++) {
+        const cell = slotDiv.children[i];
+        cell.className = "word-cell";
+        cell.textContent = "";
+        if (placedWord) {
+          cell.textContent = placedWord.word[i];
+          cell.classList.add("filled");
+        }
+      }
+      // Update drag handlers and cursor
+      slotDiv.style.cursor = placedWord ? "grab" : "";
+      slotDiv.onmousedown = null;
+      slotDiv.ontouchstart = null;
+      if (placedWord) {
+        slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
+        slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
+      }
+    }
+    return;
+  }
+  // Otherwise, create all slot DOM elements
   slotsContainer.innerHTML = "";
-  
   level.slots.forEach((slotWord, slotIndex) => {
     const slotDiv = document.createElement("div");
     slotDiv.className = "word-slot";
     slotDiv.dataset.slotIndex = slotIndex;
-    
     const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
-    
     for (let i = 0; i < slotWord.length; i++) {
       const cell = document.createElement("div");
       cell.className = "word-cell";
       cell.dataset.cellIndex = i;
-      
       if (placedWord) {
         cell.textContent = placedWord.word[i];
         cell.classList.add("filled");
       }
-      
       slotDiv.appendChild(cell);
     }
-    
-    // Allow dragging word out of slot
+    slotDiv.style.cursor = placedWord ? "grab" : "";
     if (placedWord) {
-      slotDiv.style.cursor = "grab";
-    slotDiv.addEventListener("mousedown", (e) => startDragFromSlot(e, slotIndex, placedWord));
-    slotDiv.addEventListener("touchstart", (e) => startDragFromSlotTouch(e, slotIndex, placedWord));
+      slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
+      slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
     }
-    
     slotsContainer.appendChild(slotDiv);
   });
 }
@@ -238,15 +259,25 @@ function getCellSideCenter(slotIndex, cellIndex, side) {
 
 function updateHints() {
   const level = levels[currentLevelIndex];
-  
+  // Clear all hints first (but not filled cells)
+  for (let slotIndex = 0; slotIndex < level.slots.length; slotIndex++) {
+    const slotDiv = document.querySelector(`[data-slot-index="${slotIndex}"]`);
+    if (!slotDiv) continue;
+    for (let i = 0; i < slotDiv.children.length; i++) {
+      const cell = slotDiv.children[i];
+      if (!cell.classList.contains("filled")) {
+        cell.classList.remove("hint");
+        cell.textContent = "";
+      }
+    }
+  }
+  // Now apply hints only to relevant cells
   level.connections.forEach(conn => {
     const [from, to] = conn.split(",");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
-    
     const fromPlaced = gameState.placedWords.find(pw => pw.slotIndex === fromPos.slotIndex);
     const toPlaced = gameState.placedWords.find(pw => pw.slotIndex === toPos.slotIndex);
-    
     // Show hint if one side is filled and other is empty
     if (fromPlaced && !toPlaced) {
       const requiredLetter = fromPlaced.word[fromPos.cellIndex];
@@ -403,9 +434,9 @@ function startDragFromSlotTouch(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
-  // Remove from slot and re-render slots/hints (deferred to avoid canceling touch)
+  // Remove from slot and update only slot content (deferred to avoid canceling touch)
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-  // Defer rendering to next frame so touch drag can start properly
+  // Defer update to next frame so touch drag can start properly
   requestAnimationFrame(() => {
     renderSlots(levels[currentLevelIndex]);
     updateHints();
@@ -531,7 +562,7 @@ function startDragFromSlot(e, slotIndex, placedWord) {
     source: "slot",
     tempElement: true
   };
-  // Remove from slot but DON'T re-render yet (keeps bank word hidden)
+  // Remove from slot and update only slot content
   gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
   renderSlots(levels[currentLevelIndex]);
   updateHints();
