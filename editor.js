@@ -24,13 +24,23 @@ function setupNewEditorListeners() {
     const word = input.value.trim().toUpperCase();
     if (word) {
       editorLevel.bank.push(word);
-      // Add a slot with the same length, positioned at center initially
+      // Add a slot with the same length, positioned at center for the first slot
       const slotCount = editorLevel.slots.length;
-      const newSlot = {
-        length: word.length,
-        x: 50,  // center horizontally
-        y: 30 + (slotCount * 15) // stack vertically with spacing
-      };
+      let newSlot;
+      if (slotCount === 0) {
+        newSlot = {
+          length: word.length,
+          x: 50,
+          y: 50
+        };
+      } else {
+        // Offset subsequent slots vertically from center
+        newSlot = {
+          length: word.length,
+          x: 50,
+          y: 50 + slotCount * 15
+        };
+      }
       console.log('Adding new slot:', newSlot);
       editorLevel.slots.push(newSlot);
       input.value = "";
@@ -282,37 +292,49 @@ function drawEditorGrid(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const radius = 2;
+  // Find the offset so that the center of the canvas is the center of a grid cell
   const centerX = Math.round(canvas.width / 2);
   const centerY = Math.round(canvas.height / 2);
+  // The first vertical line to the right of center
+  const firstVLine = centerX + step / 2;
+  // The first horizontal line below center
+  const firstHLine = centerY + step / 2;
 
-  // Draw dots in a grid, centered at (centerX, centerY)
-  for (let y = centerY; y >= 0; y -= step) {
-    for (let x = centerX; x >= 0; x -= step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = (x === centerX && y === centerY) ? 'green' : '#bbb';
-      ctx.fill();
-    }
-    for (let x = centerX + step; x < canvas.width; x += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = '#bbb';
-      ctx.fill();
-    }
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1;
+
+  // Draw vertical lines
+  for (let x = firstVLine; x < canvas.width; x += step) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
   }
-  for (let y = centerY + step; y < canvas.height; y += step) {
-    for (let x = centerX; x >= 0; x -= step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = '#bbb';
-      ctx.fill();
-    }
-    for (let x = centerX + step; x < canvas.width; x += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = '#bbb';
-      ctx.fill();
-    }
+  for (let x = firstVLine - step; x > 0; x -= step) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
   }
+
+  // Draw horizontal lines
+  for (let y = firstHLine; y < canvas.height; y += step) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  for (let y = firstHLine - step; y > 0; y -= step) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  // Optionally, draw a green rectangle at the central cell
+  ctx.save();
+  ctx.strokeStyle = 'green';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(centerX - step/2, centerY - step/2, step, step);
+  ctx.restore();
 }
