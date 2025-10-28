@@ -27,20 +27,21 @@ function setupNewEditorListeners() {
       // Add a slot with the same length, positioned at center for the first slot
       const slotCount = editorLevel.slots.length;
       let newSlot;
-      if (slotCount === 0) {
-        newSlot = {
-          length: word.length,
-          x: 50,
-          y: 50
-        };
-      } else {
-        // Offset subsequent slots vertically from center
-        newSlot = {
-          length: word.length,
-          x: 50,
-          y: 50 + slotCount * 15
-        };
+      // Calculate x so that the slot's center aligns with grid cell centers for odd, and with grid cell edges for even
+      // For even length, offset by half a grid step to the left (in percent)
+      const step = CONFIG.gridStep;
+      const slotsArea = document.getElementById('editor-word-slots-area');
+      const areaWidth = slotsArea ? slotsArea.offsetWidth : 1;
+      let xCenter = 50;
+      if (word.length % 2 === 0) {
+        // Offset by half a step to the left (in percent)
+        xCenter = 50 - ((step / 2) / areaWidth) * 100;
       }
+      newSlot = {
+        length: word.length,
+        x: xCenter,
+        y: 50
+      };
       console.log('Adding new slot:', newSlot);
       editorLevel.slots.push(newSlot);
       input.value = "";
@@ -158,9 +159,8 @@ function renderEditorGameView() {
     slotDiv.style.position = 'absolute';
     slotDiv.style.left = slotData.x + '%';
     slotDiv.style.top = slotData.y + '%';
-    slotDiv.style.transform = 'translate(-50%, -50%)';
+    slotDiv.style.transform = 'translate(-50%, -50%)'; // Center the slot
     slotDiv.style.cursor = 'move';
-    
     // Add cells based on slot length
     for (let i = 0; i < slotData.length; i++) {
       const cell = document.createElement("div");
@@ -168,10 +168,8 @@ function renderEditorGameView() {
       cell.dataset.cellIndex = i;
       slotDiv.appendChild(cell);
     }
-    
     // Make slots draggable in editor
     makeSlotDraggable(slotDiv, slotIndex);
-    
     slotsContainer.appendChild(slotDiv);
   });
   
@@ -209,35 +207,34 @@ function makeSlotDraggable(slotDiv, slotIndex) {
   const onMouseMove = (e) => {
     if (!isDragging) return;
     const rect = slotDiv.parentElement.getBoundingClientRect();
-    console.log('Parent rect:', rect.width, rect.height);
     const deltaX = e.clientX - startX;
     const deltaY = e.clientY - startY;
-    console.log('Delta:', deltaX, deltaY, 'Initial:', initialLeft, initialTop);
     // Convert pixel delta to percentage
     let newX = initialLeft + (deltaX / rect.width) * 100;
     let newY = initialTop + (deltaY / rect.height) * 100;
-    console.log('Before snap:', newX, newY);
-    // Snap to grid (in px)
+    // Snap to grid cell center (in px)
     const step = CONFIG.gridStep;
-    // Convert percent to px
     let pxX = (newX / 100) * rect.width;
     let pxY = (newY / 100) * rect.height;
-    // Snap px to nearest grid point
-    pxX = Math.round(pxX / step) * step;
-    pxY = Math.round(pxY / step) * step;
+    // Find the center of the canvas
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    // Offset so that grid cell centers are at centerX, centerY and spaced by step
+    let offsetX = ((pxX - centerX) / step);
+    let offsetY = ((pxY - centerY) / step);
+    pxX = centerX + Math.round(offsetX) * step;
+    pxY = centerY + Math.round(offsetY) * step;
     // Convert back to percent
     newX = (pxX / rect.width) * 100;
     newY = (pxY / rect.height) * 100;
     // Clamp
     newX = Math.max(0, Math.min(100, newX));
     newY = Math.max(0, Math.min(100, newY));
-    console.log('Dragging slot', slotIndex, 'to', newX, newY);
     slotDiv.style.left = newX + '%';
     slotDiv.style.top = newY + '%';
     // Update data
     editorLevel.slots[slotIndex].x = newX;
     editorLevel.slots[slotIndex].y = newY;
-    // Redraw connections
     renderEditorConnections();
   };
   
