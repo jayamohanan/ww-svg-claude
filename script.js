@@ -981,27 +981,6 @@ function renderEditorGameView() {
   // Draw grid
   drawEditorGrid(gridCanvas);
   slotsContainer.innerHTML = "";
-// Draws a grid of points in the editor background
-function drawEditorGrid(canvas) {
-  // Get square size and gap from CONFIG
-  const step = CONFIG.gridStep;
-  // Set canvas size to match parent
-  const parent = canvas.parentElement;
-  const rect = parent.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#bbb';
-  const radius = 2;
-  for (let y = step/2; y < canvas.height; y += step) {
-    for (let x = step/2; x < canvas.width; x += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.fill();
-    }
-  }
-}
   editorLevel.slots.forEach((slotData, slotIndex) => {
     const slotDiv = document.createElement("div");
     slotDiv.className = "word-slot";
@@ -1142,3 +1121,48 @@ function isEditorMode() {
 // ============================
 
 document.addEventListener("DOMContentLoaded", init);
+
+// Draws a grid of points in the editor background
+function drawEditorGrid(canvas) {
+  const step = CONFIG.gridStep;
+  const parent = canvas.parentElement;
+  const rect = parent.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const radius = 2;
+  const centerX = Math.round(canvas.width / 2);
+  const centerY = Math.round(canvas.height / 2);
+
+  // Draw dots in a grid, centered at (centerX, centerY)
+  for (let y = centerY; y >= 0; y -= step) {
+    for (let x = centerX; x >= 0; x -= step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = (x === centerX && y === centerY) ? 'green' : '#bbb';
+      ctx.fill();
+    }
+    for (let x = centerX + step; x < canvas.width; x += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = '#bbb';
+      ctx.fill();
+    }
+  }
+  for (let y = centerY + step; y < canvas.height; y += step) {
+    for (let x = centerX; x >= 0; x -= step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = '#bbb';
+      ctx.fill();
+    }
+    for (let x = centerX + step; x < canvas.width; x += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fillStyle = '#bbb';
+      ctx.fill();
+    }
+  }
+}
