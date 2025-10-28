@@ -16,7 +16,7 @@ let gameState = {
 const isEditor = window.location.search.includes("editor=true");
 
 let editorLevel = {
-  slots: [],
+  slots: [], // Array of {length, x, y} - x,y are percentages (0-100)
   bank: [],
   connections: []
 };
@@ -43,7 +43,7 @@ function loadLevels() {
       if (response.ok) {
         return response.json();
       } else {
-        console.error('Could not load levels.json');
+  console.error('Could not load levels.json');
         return [];
       }
     })
@@ -57,7 +57,7 @@ function loadLevels() {
     })
     .catch(function(e) {
       levels = [];
-      console.error('Error loading levels.json:', e);
+  console.error('Error loading levels.json:', e);
     });
 }
 
@@ -110,13 +110,32 @@ function renderGame() {
 // Only create slot DOM elements once per level load
 function renderSlots(level, force = false) {
   const slotsContainer = document.getElementById("word-slots");
+  
+  // Check if slots data format has position info
+  const hasPositions = level.slots.length > 0 && typeof level.slots[0] === 'object' && 'x' in level.slots[0];
+  
+  // If positioned slots, make container relative for absolute positioning
+  if (hasPositions) {
+    slotsContainer.style.position = 'relative';
+    slotsContainer.style.width = '100%';
+    slotsContainer.style.height = '100%';
+    slotsContainer.style.flexDirection = 'unset';
+    slotsContainer.style.gap = '0';
+  } else {
+    slotsContainer.style.position = '';
+    slotsContainer.style.flexDirection = 'column';
+    slotsContainer.style.gap = 'var(--spacing-xl)';
+  }
+  
   // If slots already exist and not forced, just update content
   if (slotsContainer.children.length === level.slots.length && !force) {
     for (let slotIndex = 0; slotIndex < level.slots.length; slotIndex++) {
       const slotDiv = slotsContainer.children[slotIndex];
-      const slotWord = level.slots[slotIndex];
+      const slotData = level.slots[slotIndex];
+      const slotLength = hasPositions ? slotData.length : slotData.length;
       const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
-      for (let i = 0; i < slotWord.length; i++) {
+      
+      for (let i = 0; i < slotLength; i++) {
         const cell = slotDiv.children[i];
         cell.className = "word-cell";
         cell.textContent = "";
@@ -136,14 +155,26 @@ function renderSlots(level, force = false) {
     }
     return;
   }
+  
   // Otherwise, create all slot DOM elements
   slotsContainer.innerHTML = "";
-  level.slots.forEach((slotWord, slotIndex) => {
+  level.slots.forEach((slotData, slotIndex) => {
     const slotDiv = document.createElement("div");
     slotDiv.className = "word-slot";
     slotDiv.dataset.slotIndex = slotIndex;
+    
+    // Handle positioned slots
+    if (hasPositions) {
+      slotDiv.style.position = 'absolute';
+      slotDiv.style.left = slotData.x + '%';
+      slotDiv.style.top = slotData.y + '%';
+      slotDiv.style.transform = 'translate(-50%, -50%)'; // Center the slot at x,y
+    }
+    
+    const slotLength = hasPositions ? slotData.length : slotData.length;
     const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
-    for (let i = 0; i < slotWord.length; i++) {
+    
+    for (let i = 0; i < slotLength; i++) {
       const cell = document.createElement("div");
       cell.className = "word-cell";
       cell.dataset.cellIndex = i;
@@ -830,7 +861,12 @@ function setupNewEditorListeners() {
     const word = input.value.trim().toUpperCase();
     if (word) {
       editorLevel.bank.push(word);
-      editorLevel.slots.push(word);
+      // Add a slot with the same length, positioned at center initially
+      editorLevel.slots.push({
+        length: word.length,
+        x: 50,  // center horizontally
+        y: 30 + (editorLevel.slots.length * 15) // stack vertically with spacing
+      });
       input.value = "";
       renderEditorGameView();
     }
@@ -895,19 +931,37 @@ function shuffleArray(arr) {
 function renderEditorGameView() {
   const slotsContainer = document.getElementById("editor-word-slots");
   if (!slotsContainer) return;
+  
+  // Set up container for absolute positioning
+  slotsContainer.style.position = 'relative';
+  slotsContainer.style.width = '100%';
+  slotsContainer.style.height = '100%';
+  
   slotsContainer.innerHTML = "";
-  editorLevel.slots.forEach((slotWord, slotIndex) => {
+  editorLevel.slots.forEach((slotData, slotIndex) => {
     const slotDiv = document.createElement("div");
     slotDiv.className = "word-slot";
     slotDiv.dataset.slotIndex = slotIndex;
-    for (let i = 0; i < slotWord.length; i++) {
+    slotDiv.style.position = 'absolute';
+    slotDiv.style.left = slotData.x + '%';
+    slotDiv.style.top = slotData.y + '%';
+    slotDiv.style.transform = 'translate(-50%, -50%)';
+    slotDiv.style.cursor = 'move';
+    
+    // Add cells based on slot length
+    for (let i = 0; i < slotData.length; i++) {
       const cell = document.createElement("div");
       cell.className = "word-cell";
       cell.dataset.cellIndex = i;
       slotDiv.appendChild(cell);
     }
+    
+    // Make slots draggable in editor
+    makeSlotDraggable(slotDiv, slotIndex);
+    
     slotsContainer.appendChild(slotDiv);
   });
+  
   // Render bank words
   const bankContainer = document.getElementById("editor-word-bank");
   if (!bankContainer) return;
@@ -919,6 +973,64 @@ function renderEditorGameView() {
     bankContainer.appendChild(wordDiv);
   });
   renderEditorConnections();
+}
+
+// Make slots draggable in the editor
+function makeSlotDraggable(slotDiv, slotIndex) {
+  let isDragging = false;
+  let startX, startY, initialLeft, initialTop;
+  
+  const onMouseDown = (e) => {
+    isDragging = true;
+    const rect = slotDiv.parentElement.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    
+    // Get current position as percentage
+    const currentX = parseFloat(slotDiv.style.left);
+    const currentY = parseFloat(slotDiv.style.top);
+    initialLeft = currentX;
+    initialTop = currentY;
+    
+    e.preventDefault();
+  };
+  
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    
+    const rect = slotDiv.parentElement.getBoundingClientRect();
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    
+    // Convert pixel delta to percentage
+    const deltaXPercent = (deltaX / rect.width) * 100;
+    const deltaYPercent = (deltaY / rect.height) * 100;
+    
+    let newX = initialLeft + deltaXPercent;
+    let newY = initialTop + deltaYPercent;
+    
+    // Clamp to 0-100%
+    newX = Math.max(0, Math.min(100, newX));
+    newY = Math.max(0, Math.min(100, newY));
+    
+    slotDiv.style.left = newX + '%';
+    slotDiv.style.top = newY + '%';
+    
+    // Update data
+    editorLevel.slots[slotIndex].x = newX;
+    editorLevel.slots[slotIndex].y = newY;
+    
+    // Redraw connections
+    renderEditorConnections();
+  };
+  
+  const onMouseUp = () => {
+    isDragging = false;
+  };
+  
+  slotDiv.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
 }
 
 function renderEditorConnections() {

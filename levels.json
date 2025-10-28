@@ -1,33 +1,39 @@
 [
+    {
+  "slots": [
+    {
+      "length": 3,
+      "x": 50,
+      "y": 30
+    },
+    {
+      "length": 3,
+      "x": 50,
+      "y": 45
+    }
+  ],
+  "bank": [
+    "CAR",
+    "CAT"
+  ],
+  "connections": [
+    "002,100"
+  ]
+},
   {
-    "slots": ["SOFT", "TUNE"],
+    "slots": [
+      { "length": 4, "x": 30, "y": 30 },
+      { "length": 4, "x": 70, "y": 30 }
+    ],
     "bank": ["SOFT", "TUNE"],
     "connections": ["032,100"]
   },
   {
-  "slots": [
-    "NEWS",
-    "WEST"
-  ],
-  "bank": [
-    "NEWS",
-    "WEST"
-  ],
-  "connections": [
-    "022,100"
-  ]
-},
-{
-  "slots": [
-    "MISS",
-    "SOAK"
-  ],
-  "bank": [
-    "MISS",
-    "SOAK"
-  ],
-  "connections": [
-    "032,100"
-  ]
-}
+    "slots": [
+      { "length": 4, "x": 50, "y": 25 },
+      { "length": 4, "x": 50, "y": 50 }
+    ],
+    "bank": ["NEWS", "WEST"],
+    "connections": ["022,100"]
+  }
 ]
