@@ -862,11 +862,14 @@ function setupNewEditorListeners() {
     if (word) {
       editorLevel.bank.push(word);
       // Add a slot with the same length, positioned at center initially
-      editorLevel.slots.push({
+      const slotCount = editorLevel.slots.length;
+      const newSlot = {
         length: word.length,
         x: 50,  // center horizontally
-        y: 30 + (editorLevel.slots.length * 15) // stack vertically with spacing
-      });
+        y: 30 + (slotCount * 15) // stack vertically with spacing
+      };
+      console.log('Adding new slot:', newSlot);
+      editorLevel.slots.push(newSlot);
       input.value = "";
       renderEditorGameView();
     }
@@ -929,15 +932,76 @@ function shuffleArray(arr) {
 }
 
 function renderEditorGameView() {
-  const slotsContainer = document.getElementById("editor-word-slots");
-  if (!slotsContainer) return;
-  
-  // Set up container for absolute positioning
-  slotsContainer.style.position = 'relative';
-  slotsContainer.style.width = '100%';
-  slotsContainer.style.height = '100%';
-  
+  const slotsArea = document.getElementById("editor-word-slots-area");
+  let gridCanvas = document.getElementById("editor-grid-bg");
+  let slotsContainer = document.getElementById("editor-word-slots");
+  // Create grid canvas if not present
+  if (!gridCanvas) {
+    gridCanvas = document.createElement('canvas');
+    gridCanvas.id = 'editor-grid-bg';
+    gridCanvas.style.position = 'absolute';
+    gridCanvas.style.left = '0';
+    gridCanvas.style.top = '0';
+    gridCanvas.style.width = '100%';
+    gridCanvas.style.height = '100%';
+    gridCanvas.style.zIndex = '0';
+    gridCanvas.style.pointerEvents = 'none';
+    slotsArea.appendChild(gridCanvas);
+  } else {
+    gridCanvas.style.zIndex = '0';
+    gridCanvas.style.pointerEvents = 'none';
+  }
+  // Create slots container if not present
+  if (!slotsContainer) {
+    slotsContainer = document.createElement('div');
+    slotsContainer.id = 'editor-word-slots';
+    slotsContainer.style.position = 'absolute';
+    slotsContainer.style.left = '0';
+    slotsContainer.style.top = '0';
+    slotsContainer.style.width = '100%';
+    slotsContainer.style.height = '100%';
+    slotsContainer.style.zIndex = '10';
+    slotsContainer.style.pointerEvents = 'auto';
+    slotsArea.appendChild(slotsContainer);
+  } else {
+    slotsContainer.style.position = 'absolute';
+    slotsContainer.style.left = '0';
+    slotsContainer.style.top = '0';
+    slotsContainer.style.width = '100%';
+    slotsContainer.style.height = '100%';
+    slotsContainer.style.zIndex = '10';
+    slotsContainer.style.pointerEvents = 'auto';
+  }
+  // Set up area and canvas to fill parent
+  slotsArea.style.position = 'relative';
+  slotsArea.style.width = '100%';
+  slotsArea.style.height = '100%';
+  gridCanvas.width = slotsArea.offsetWidth;
+  gridCanvas.height = slotsArea.offsetHeight;
+  // Draw grid
+  drawEditorGrid(gridCanvas);
   slotsContainer.innerHTML = "";
+// Draws a grid of points in the editor background
+function drawEditorGrid(canvas) {
+  // Get square size and gap from CONFIG
+  const step = CONFIG.gridStep;
+  // Set canvas size to match parent
+  const parent = canvas.parentElement;
+  const rect = parent.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = rect.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#bbb';
+  const radius = 2;
+  for (let y = step/2; y < canvas.height; y += step) {
+    for (let x = step/2; x < canvas.width; x += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+}
   editorLevel.slots.forEach((slotData, slotIndex) => {
     const slotDiv = document.createElement("div");
     slotDiv.className = "word-slot";
@@ -962,7 +1026,7 @@ function renderEditorGameView() {
     slotsContainer.appendChild(slotDiv);
   });
   
-  // Render bank words
+  // Render bank words (draggable)
   const bankContainer = document.getElementById("editor-word-bank");
   if (!bankContainer) return;
   bankContainer.innerHTML = "";
@@ -981,45 +1045,49 @@ function makeSlotDraggable(slotDiv, slotIndex) {
   let startX, startY, initialLeft, initialTop;
   
   const onMouseDown = (e) => {
+    console.log('Slot drag start', slotIndex, 'Slot data:', editorLevel.slots[slotIndex]);
     isDragging = true;
     const rect = slotDiv.parentElement.getBoundingClientRect();
     startX = e.clientX;
     startY = e.clientY;
-    
-    // Get current position as percentage
-    const currentX = parseFloat(slotDiv.style.left);
-    const currentY = parseFloat(slotDiv.style.top);
-    initialLeft = currentX;
-    initialTop = currentY;
-    
+    // Always use slot data for initial position
+    initialLeft = editorLevel.slots[slotIndex].x || 50;
+    initialTop = editorLevel.slots[slotIndex].y || 50;
+    console.log('Initial position:', initialLeft, initialTop);
     e.preventDefault();
   };
   
   const onMouseMove = (e) => {
     if (!isDragging) return;
-    
     const rect = slotDiv.parentElement.getBoundingClientRect();
+    console.log('Parent rect:', rect.width, rect.height);
     const deltaX = e.clientX - startX;
     const deltaY = e.clientY - startY;
-    
+    console.log('Delta:', deltaX, deltaY, 'Initial:', initialLeft, initialTop);
     // Convert pixel delta to percentage
-    const deltaXPercent = (deltaX / rect.width) * 100;
-    const deltaYPercent = (deltaY / rect.height) * 100;
-    
-    let newX = initialLeft + deltaXPercent;
-    let newY = initialTop + deltaYPercent;
-    
-    // Clamp to 0-100%
+    let newX = initialLeft + (deltaX / rect.width) * 100;
+    let newY = initialTop + (deltaY / rect.height) * 100;
+    console.log('Before snap:', newX, newY);
+    // Snap to grid (in px)
+    const step = CONFIG.gridStep;
+    // Convert percent to px
+    let pxX = (newX / 100) * rect.width;
+    let pxY = (newY / 100) * rect.height;
+    // Snap px to nearest grid point
+    pxX = Math.round(pxX / step) * step;
+    pxY = Math.round(pxY / step) * step;
+    // Convert back to percent
+    newX = (pxX / rect.width) * 100;
+    newY = (pxY / rect.height) * 100;
+    // Clamp
     newX = Math.max(0, Math.min(100, newX));
     newY = Math.max(0, Math.min(100, newY));
-    
+    console.log('Dragging slot', slotIndex, 'to', newX, newY);
     slotDiv.style.left = newX + '%';
     slotDiv.style.top = newY + '%';
-    
     // Update data
     editorLevel.slots[slotIndex].x = newX;
     editorLevel.slots[slotIndex].y = newY;
-    
     // Redraw connections
     renderEditorConnections();
   };
