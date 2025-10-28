@@ -4,6 +4,7 @@
 
 // Only create slot DOM elements once per level load
 function renderSlots(level, force = false) {
+  console.log('Rendering slots for level', level, 'force:', force);
   const slotsContainer = document.getElementById("word-slots");
   
   // Check if slots data format has position info
@@ -22,8 +23,10 @@ function renderSlots(level, force = false) {
     slotsContainer.style.gap = 'var(--spacing-xl)';
   }
   
+  console.log('slotsContainer.children.length', slotsContainer.children.length, 'level.slots.length', level.slots.length, 'force', force);
   // If slots already exist and not forced, just update content
   if (slotsContainer.children.length === level.slots.length && !force) {
+    console.log('Slots already rendered, updating content only');
     for (let slotIndex = 0; slotIndex < level.slots.length; slotIndex++) {
       const slotDiv = slotsContainer.children[slotIndex];
       const slotData = level.slots[slotIndex];
@@ -32,6 +35,7 @@ function renderSlots(level, force = false) {
       
       for (let i = 0; i < slotLength; i++) {
         const cell = slotDiv.children[i];
+        console.log('cell', cell);
         cell.className = "word-cell";
         cell.textContent = "";
         if (placedWord) {
