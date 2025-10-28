@@ -4,6 +4,8 @@
 // All game dimensions and design constants in one place
 
 const CONFIG = {
+  // Word bank area height (as CSS value, e.g. '40%')
+  wordBankAreaHeight: '40%',
   // Square/Cell dimensions
   squareSize: 35,        // Size of each letter square in pixels
   squareGap: 1,          // Gap between squares in pixels
@@ -55,4 +57,8 @@ const CONFIG = {
 // Make CONFIG available globally
 if (typeof window !== 'undefined') {
   window.CONFIG = CONFIG;
+  
+  // Set CSS variable for word bank area height from CONFIG
+  document.documentElement.style.setProperty('--word-bank-area-height', CONFIG.wordBankAreaHeight || '40%');
+  console.log('Word bank area height set to:', CONFIG.wordBankAreaHeight);
 }
