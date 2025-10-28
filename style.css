@@ -1,3 +1,15 @@
+/* ===== MOBILE SAFE AREA FIXES ===== */
+@media (max-width: 768px) {
+  #game-container {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+  .control-btn {
+    bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0px));
+  }
+  #replay-btn {
+    right: calc(var(--spacing-md) + env(safe-area-inset-right, 0px));
+  }
+}
 /* ===== CSS VARIABLES (DESIGN TOKENS) ===== */
 :root {
   /* Square/Cell sizes */
