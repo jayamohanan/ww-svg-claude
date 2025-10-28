@@ -2,6 +2,10 @@
 // LEVEL EDITOR
 // ============================
 
+// Track selected squares for drawing connections
+let drawModeEnabled = false;
+let selectedSquares = []; // Array of {slotIndex, squareIndex, element}
+
 function showEditor() {
   // Hide old game and editor screens
   const gameContainer = document.getElementById("game-container");
@@ -17,9 +21,40 @@ function showEditor() {
   setupNewEditorListeners();
   renderEditorGameView();
   updateWordList(); // Initialize word list display
+  updateConnectionList(); // Initialize connection list display
 }
 
 function setupNewEditorListeners() {
+  // Draw mode toggle
+  document.getElementById("editor-draw-toggle").onchange = (e) => {
+    drawModeEnabled = e.target.checked;
+    selectedSquares = [];
+    updateSelectionInfo();
+    updateDrawButton();
+    // Remove all highlights
+    document.querySelectorAll('.word-cell').forEach(cell => {
+      cell.style.outline = '';
+    });
+  };
+  
+  // Draw connection button
+  document.getElementById("editor-draw-connection").onclick = () => {
+    if (selectedSquares.length === 2) {
+      const connectionString = generateConnectionString(selectedSquares[0], selectedSquares[1]);
+      if (connectionString) {
+        editorLevel.connections.push(connectionString);
+        console.log('Added connection:', connectionString);
+        updateConnectionList();
+        renderEditorGameView();
+        // Clear selection
+        selectedSquares.forEach(sq => sq.element.style.outline = '');
+        selectedSquares = [];
+        updateSelectionInfo();
+        updateDrawButton();
+      }
+    }
+  };
+  
   document.getElementById("editor-add-word").onclick = () => {
     const input = document.getElementById("editor-word-input");
     const word = input.value.trim().toUpperCase();
@@ -168,6 +203,26 @@ function renderEditorGameView() {
       const cell = document.createElement("div");
       cell.className = "word-cell";
       cell.dataset.cellIndex = i;
+      cell.dataset.slotIndex = slotIndex;
+      
+      // Add click handler for draw mode
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleSquareClick(slotIndex, i, cell);
+      });
+      
+      // Visual feedback on hover in draw mode
+      cell.addEventListener('mouseenter', () => {
+        if (drawModeEnabled) {
+          cell.style.backgroundColor = '#e3f2fd';
+        }
+      });
+      cell.addEventListener('mouseleave', () => {
+        if (drawModeEnabled && !selectedSquares.some(sq => sq.element === cell)) {
+          cell.style.backgroundColor = '';
+        }
+      });
+      
       slotDiv.appendChild(cell);
     }
     // Make slots draggable in editor
@@ -399,4 +454,211 @@ function deleteWord(index) {
   // Update the display
   renderEditorGameView();
   updateWordList();
+}
+
+// ============================
+// CONNECTION DRAWING SYSTEM
+// ============================
+
+function updateSelectionInfo() {
+  const infoDiv = document.getElementById('editor-selection-info');
+  if (!infoDiv) return;
+  
+  if (!drawModeEnabled) {
+    infoDiv.textContent = 'Enable Draw Mode to select squares';
+    return;
+  }
+  
+  if (selectedSquares.length === 0) {
+    infoDiv.textContent = 'Select first square';
+  } else if (selectedSquares.length === 1) {
+    infoDiv.textContent = `Slot ${selectedSquares[0].slotIndex}, Square ${selectedSquares[0].squareIndex} selected. Select second square.`;
+  } else {
+    infoDiv.textContent = `Two squares selected. Click Draw Connection.`;
+  }
+}
+
+function updateDrawButton() {
+  const btn = document.getElementById('editor-draw-connection');
+  if (!btn) return;
+  
+  const canDraw = drawModeEnabled && selectedSquares.length === 2 && 
+                  selectedSquares[0].slotIndex !== selectedSquares[1].slotIndex;
+  
+  btn.disabled = !canDraw;
+  btn.style.opacity = canDraw ? '1' : '0.5';
+  btn.style.cursor = canDraw ? 'pointer' : 'not-allowed';
+}
+
+function handleSquareClick(slotIndex, squareIndex, element) {
+  if (!drawModeEnabled) return;
+  
+  // Check if this square is already selected
+  const alreadySelected = selectedSquares.findIndex(
+    sq => sq.slotIndex === slotIndex && sq.squareIndex === squareIndex
+  );
+  
+  if (alreadySelected !== -1) {
+    // Deselect
+    selectedSquares[alreadySelected].element.style.outline = '';
+    selectedSquares.splice(alreadySelected, 1);
+  } else {
+    // If selecting from same slot as already selected, replace the old selection
+    const sameSlotIndex = selectedSquares.findIndex(sq => sq.slotIndex === slotIndex);
+    if (sameSlotIndex !== -1) {
+      selectedSquares[sameSlotIndex].element.style.outline = '';
+      selectedSquares.splice(sameSlotIndex, 1);
+    }
+    
+    // Add new selection (max 2)
+    if (selectedSquares.length < 2) {
+      element.style.outline = '3px solid #4caf50';
+      selectedSquares.push({ slotIndex, squareIndex, element });
+    } else {
+      // Replace oldest selection
+      selectedSquares[0].element.style.outline = '';
+      selectedSquares.shift();
+      element.style.outline = '3px solid #4caf50';
+      selectedSquares.push({ slotIndex, squareIndex, element });
+    }
+  }
+  
+  updateSelectionInfo();
+  updateDrawButton();
+}
+
+function generateConnectionString(sq1, sq2) {
+  // Get the position of each square in the viewport
+  const rect1 = sq1.element.getBoundingClientRect();
+  const rect2 = sq2.element.getBoundingClientRect();
+  
+  // Calculate center points
+  const center1 = {
+    x: rect1.left + rect1.width / 2,
+    y: rect1.top + rect1.height / 2
+  };
+  const center2 = {
+    x: rect2.left + rect2.width / 2,
+    y: rect2.top + rect2.height / 2
+  };
+  
+  // Determine valid sides for each square based on position in slot
+  const slot1Length = editorLevel.slots[sq1.slotIndex].length;
+  const slot2Length = editorLevel.slots[sq2.slotIndex].length;
+  
+  const validSides1 = getValidSides(sq1.squareIndex, slot1Length);
+  const validSides2 = getValidSides(sq2.squareIndex, slot2Length);
+  
+  // Calculate midpoints for each side
+  const midpoints1 = calculateSideMidpoints(rect1, validSides1);
+  const midpoints2 = calculateSideMidpoints(rect2, validSides2);
+  
+  // Find closest pair of midpoints
+  let minDist = Infinity;
+  let bestSide1 = 0;
+  let bestSide2 = 0;
+  
+  midpoints1.forEach((mp1, side1) => {
+    if (mp1 === null) return;
+    midpoints2.forEach((mp2, side2) => {
+      if (mp2 === null) return;
+      const dist = Math.sqrt(Math.pow(mp1.x - mp2.x, 2) + Math.pow(mp1.y - mp2.y, 2));
+      if (dist < minDist) {
+        minDist = dist;
+        bestSide1 = side1;
+        bestSide2 = side2;
+      }
+    });
+  });
+  
+  // Format: slotIndex squareIndex side - slotIndex squareIndex side
+  // e.g., "002-100" means slot 0, square 0, side 2 connects to slot 1, square 0, side 0
+  const part1 = `${sq1.slotIndex}${sq1.squareIndex}${bestSide1}`;
+  const part2 = `${sq2.slotIndex}${sq2.squareIndex}${bestSide2}`;
+  
+  return `${part1}-${part2}`;
+}
+
+function getValidSides(squareIndex, slotLength) {
+  // 0: top, 1: right, 2: bottom, 3: left
+  // Ignore sides that connect to adjacent squares in the SAME slot
+  // Slots are horizontal: [sq0][sq1][sq2]
+  if (slotLength === 1) {
+    // Single square slot - all sides available
+    return [true, true, true, true];
+  } else if (squareIndex === 0) {
+    // First square: has square to its RIGHT, so keep left side, ignore right
+    return [true, false, true, true];
+  } else if (squareIndex === slotLength - 1) {
+    // Last square: has square to its LEFT, so keep right side, ignore left
+    return [true, true, true, false];
+  } else {
+    // Middle square: has squares on both left and right, only top and bottom available
+    return [true, false, true, false];
+  }
+}
+
+function calculateSideMidpoints(rect, validSides) {
+  const midpoints = [null, null, null, null];
+  
+  if (validSides[0]) {
+    // Top
+    midpoints[0] = { x: rect.left + rect.width / 2, y: rect.top };
+  }
+  if (validSides[1]) {
+    // Right
+    midpoints[1] = { x: rect.right, y: rect.top + rect.height / 2 };
+  }
+  if (validSides[2]) {
+    // Bottom
+    midpoints[2] = { x: rect.left + rect.width / 2, y: rect.bottom };
+  }
+  if (validSides[3]) {
+    // Left
+    midpoints[3] = { x: rect.left, y: rect.top + rect.height / 2 };
+  }
+  
+  return midpoints;
+}
+
+function updateConnectionList() {
+  const listContainer = document.getElementById('editor-connection-list');
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = '';
+  
+  if (editorLevel.connections.length === 0) {
+    listContainer.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">No connections yet</div>';
+    return;
+  }
+  
+  editorLevel.connections.forEach((conn, index) => {
+    const connItem = document.createElement('div');
+    connItem.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 8px; margin-bottom:6px; background:#f5f5f5; border-radius:4px; border:1px solid #ddd;';
+    
+    const connText = document.createElement('span');
+    connText.textContent = conn;
+    connText.style.cssText = 'font-family:monospace; color:#333; font-size:12px;';
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = '×';
+    deleteBtn.title = 'Delete connection';
+    deleteBtn.style.cssText = 'background:#f44336; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0;';
+    deleteBtn.onclick = () => deleteConnection(index);
+    
+    deleteBtn.onmouseenter = () => deleteBtn.style.background = '#d32f2f';
+    deleteBtn.onmouseleave = () => deleteBtn.style.background = '#f44336';
+    
+    connItem.appendChild(connText);
+    connItem.appendChild(deleteBtn);
+    listContainer.appendChild(connItem);
+  });
+}
+
+function deleteConnection(index) {
+  if (index < 0 || index >= editorLevel.connections.length) return;
+  
+  editorLevel.connections.splice(index, 1);
+  updateConnectionList();
+  renderEditorGameView();
 }
