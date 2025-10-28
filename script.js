@@ -3,7 +3,6 @@
 // ============================
 
 function init() {
-  console.log('Init called, isEditor:', isEditor);
   loadLevels();
   
   if (isEditor) {

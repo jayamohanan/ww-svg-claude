@@ -8,34 +8,22 @@ function renderSlots(level, force = false) {
   const slotsContainer = document.getElementById("word-slots");
   
   // Check if slots data format has position info
-  const hasPositions = level.slots.length > 0 && typeof level.slots[0] === 'object' && 'x' in level.slots[0];
-  
-  // If positioned slots, make container relative for absolute positioning
-  if (hasPositions) {
     slotsContainer.style.position = 'relative';
     slotsContainer.style.width = '100%';
     slotsContainer.style.height = '100%';
     slotsContainer.style.flexDirection = 'unset';
     slotsContainer.style.gap = '0';
-  } else {
-    slotsContainer.style.position = '';
-    slotsContainer.style.flexDirection = 'column';
-    slotsContainer.style.gap = 'var(--spacing-xl)';
-  }
   
-  console.log('slotsContainer.children.length', slotsContainer.children.length, 'level.slots.length', level.slots.length, 'force', force);
   // If slots already exist and not forced, just update content
   if (slotsContainer.children.length === level.slots.length && !force) {
-    console.log('Slots already rendered, updating content only');
     for (let slotIndex = 0; slotIndex < level.slots.length; slotIndex++) {
       const slotDiv = slotsContainer.children[slotIndex];
       const slotData = level.slots[slotIndex];
-      const slotLength = hasPositions ? slotData.length : slotData.length;
+      const slotLength = slotData.length;
       const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
       
       for (let i = 0; i < slotLength; i++) {
         const cell = slotDiv.children[i];
-        console.log('cell', cell);
         cell.className = "word-cell";
         cell.textContent = "";
         if (placedWord) {
@@ -52,9 +40,10 @@ function renderSlots(level, force = false) {
         slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
       }
     }
+    console.log('Slots already rendered, updating content only');
     return;
   }
-  
+  console.log('Creating slot DOM elements focerced:', force);
   // Otherwise, create all slot DOM elements
   slotsContainer.innerHTML = "";
   level.slots.forEach((slotData, slotIndex) => {
@@ -62,15 +51,14 @@ function renderSlots(level, force = false) {
     slotDiv.className = "word-slot";
     slotDiv.dataset.slotIndex = slotIndex;
     
-    // Handle positioned slots
-    if (hasPositions) {
+    
       slotDiv.style.position = 'absolute';
       slotDiv.style.left = slotData.x + '%';
       slotDiv.style.top = slotData.y + '%';
       slotDiv.style.transform = 'translate(-50%, -50%)'; // Center the slot at x,y
-    }
     
-    const slotLength = hasPositions ? slotData.length : slotData.length;
+    
+    const slotLength = slotData.length;
     const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
     
     for (let i = 0; i < slotLength; i++) {

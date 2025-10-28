@@ -23,7 +23,7 @@
   {
     "slots": [
       { "length": 4, "x": 30, "y": 30 },
-      { "length": 4, "x": 70, "y": 30 }
+      { "length": 4, "x": 70, "y": 50 }
     ],
     "bank": ["SOFT", "TUNE"],
     "connections": ["032,100"]

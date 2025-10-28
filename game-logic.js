@@ -14,7 +14,6 @@ function loadLevels() {
     })
     .then(function(data) {
       levels = data;
-      console.log('Levels loaded:', levels);
       // Start level after loading
       if (!isEditor && levels.length > 0) {
         startLevel(currentLevelIndex);
@@ -42,17 +41,17 @@ function startLevel(index) {
   currentLevelIndex = index;
   gameState.placedWords = [];
   renderGame._connectionsDrawn = false;
-  renderGame();
+  renderGame(true);
   document.getElementById("success-screen").classList.add("hidden");
 }
 
-function renderGame() {
+function renderGame(force = false) {
   const level = levels[currentLevelIndex];
   if (!level) {
     console.error('No level data at index', currentLevelIndex);
     return;
   }
-  renderSlots(level);
+  renderSlots(level, force);
   renderBank(level);
   updateHints();
   // Draw connections only once after slots are rendered
