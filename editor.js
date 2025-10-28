@@ -16,6 +16,7 @@ function showEditor() {
   }
   setupNewEditorListeners();
   renderEditorGameView();
+  updateWordList(); // Initialize word list display
 }
 
 function setupNewEditorListeners() {
@@ -46,6 +47,7 @@ function setupNewEditorListeners() {
       editorLevel.slots.push(newSlot);
       input.value = "";
       renderEditorGameView();
+      updateWordList(); // Update the word list display
     }
   };
   document.getElementById("editor-add-conn").onclick = () => {
@@ -340,4 +342,61 @@ function drawEditorGrid(canvas) {
   ctx.lineWidth = 2;
   ctx.strokeRect(centerX - step/2, centerY - step/2, step, step);
   ctx.restore();
+}
+
+// ============================
+// WORD LIST MANAGEMENT
+// ============================
+
+function updateWordList() {
+  const wordListContainer = document.getElementById('editor-word-list');
+  if (!wordListContainer) return;
+  
+  // Clear existing list
+  wordListContainer.innerHTML = '';
+  
+  if (editorLevel.bank.length === 0) {
+    wordListContainer.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">No words added yet</div>';
+    return;
+  }
+  
+  // Create list items for each word
+  editorLevel.bank.forEach((word, index) => {
+    const wordItem = document.createElement('div');
+    wordItem.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:white; border-radius:4px; border:1px solid #ddd;';
+    
+    const wordText = document.createElement('span');
+    wordText.textContent = word;
+    wordText.style.cssText = 'font-weight:bold; color:#333; font-size:13px;';
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerHTML = '×';
+    deleteBtn.title = 'Delete word';
+    deleteBtn.style.cssText = 'background:#f44336; color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0;';
+    deleteBtn.onclick = () => deleteWord(index);
+    
+    // Hover effect
+    deleteBtn.onmouseenter = () => deleteBtn.style.background = '#d32f2f';
+    deleteBtn.onmouseleave = () => deleteBtn.style.background = '#f44336';
+    
+    wordItem.appendChild(wordText);
+    wordItem.appendChild(deleteBtn);
+    wordListContainer.appendChild(wordItem);
+  });
+}
+
+function deleteWord(index) {
+  if (index < 0 || index >= editorLevel.bank.length) return;
+  
+  // Remove word from bank
+  editorLevel.bank.splice(index, 1);
+  
+  // Remove corresponding slot
+  if (index < editorLevel.slots.length) {
+    editorLevel.slots.splice(index, 1);
+  }
+  
+  // Update the display
+  renderEditorGameView();
+  updateWordList();
 }
