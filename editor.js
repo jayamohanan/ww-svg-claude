@@ -3,7 +3,6 @@
 // ============================
 
 function showEditor() {
-  console.log('showEditor called');
   // Hide old game and editor screens
   const gameContainer = document.getElementById("game-container");
   console.log('gameContainer:', gameContainer);
@@ -12,10 +11,8 @@ function showEditor() {
   if (editorScreen) editorScreen.style.display = "none";
   // Show new editor container
   const editorContainer = document.getElementById("editor-container");
-  console.log('editorContainer:', editorContainer);
   if (editorContainer) {
     editorContainer.classList.add('show');
-    console.log('Editor container show class added');
   }
   setupNewEditorListeners();
   renderEditorGameView();
