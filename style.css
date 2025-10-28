@@ -333,6 +333,13 @@ body {
   border-color: var(--color-btn-primary);
 }
 
+/* Mobile safe area adjustments for undo button */
+@media (max-width: 768px) {
+  .undo-btn {
+    right: calc(var(--spacing-md) + env(safe-area-inset-right));
+  }
+}
+
 /* ===== CONTROL BUTTONS ===== */
 .control-btn {
   position: absolute;
@@ -364,6 +371,17 @@ body {
 
 #next-btn:hover {
   background: var(--color-btn-primary-hover);
+}
+
+/* Mobile safe area adjustments for bottom buttons */
+@media (max-width: 768px) {
+  .control-btn {
+    bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom));
+  }
+  
+  #replay-btn {
+    right: calc(var(--spacing-md) + env(safe-area-inset-right));
+  }
 }
 
 /* ===== SUCCESS SCREEN ===== */
