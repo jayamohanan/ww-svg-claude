@@ -222,7 +222,13 @@ function makeSlotDraggable(slotDiv, slotIndex) {
     // Offset so that grid cell centers are at centerX, centerY and spaced by step
     let offsetX = ((pxX - centerX) / step);
     let offsetY = ((pxY - centerY) / step);
-    pxX = centerX + Math.round(offsetX) * step;
+    // For even-length slots, snap to midpoint between grid cell centers
+    const slotLength = editorLevel.slots[slotIndex].length;
+    let evenOffset = 0;
+    if (slotLength % 2 === 0) {
+      evenOffset = step / 2;
+    }
+    pxX = centerX + Math.round(offsetX) * step + evenOffset;
     pxY = centerY + Math.round(offsetY) * step;
     // Convert back to percent
     newX = (pxX / rect.width) * 100;
