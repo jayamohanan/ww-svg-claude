@@ -416,6 +416,7 @@ function onDragMove(e) {
 }
 
 function onDragEnd(e) {
+  console.log('jaya');
   if (!gameState.draggedElement || !gameState.dragData) return;
   document.removeEventListener("mousemove", onDragMove);
   document.removeEventListener("mouseup", onDragEnd);
@@ -430,7 +431,8 @@ function onDragEnd(e) {
       e.clientX <= rect.right &&
       e.clientY >= rect.top &&
       e.clientY <= rect.bottom
-    ) {
+    ) 
+    {
       droppedOnSlot = true;
       const result = checkConstraints(word, index);
       if (result.valid) {
@@ -471,41 +473,32 @@ function onDragEnd(e) {
 
 function animateBack() {
   if (!gameState.draggedElement || !gameState.dragData) return;
-  const { source, bankIndex, originalRect, originalElement } = gameState.dragData;
+  const { bankIndex, originalElement } = gameState.dragData;
   gameState.draggedElement.classList.remove("dragging");
   gameState.draggedElement.style.zIndex = "";
   void gameState.draggedElement.offsetWidth;
-  if (source === "bank") {
-    if (originalRect) {
-      gameState.draggedElement.style.transition = "left 0.1s linear, top 0.1s linear";
-      gameState.draggedElement.style.left = originalRect.left + "px";
-      gameState.draggedElement.style.top = originalRect.top + "px";
-      setTimeout(() => {
-        if (originalElement) originalElement.classList.remove("invisible");
-        if (gameState.draggedElement) gameState.draggedElement.remove();
-        cleanupDrag(true);
-      }, 100);
-    } else {
+  
+  // Always animate to bank position (never back to slot)
+  const bankElement = document.querySelector(`.bank-word[data-bank-index="${bankIndex}"]`);
+  if (bankElement) {
+    const rect = bankElement.getBoundingClientRect();
+    gameState.draggedElement.style.transition = "left 0.1s linear, top 0.1s linear";
+    gameState.draggedElement.style.left = rect.left + "px";
+    gameState.draggedElement.style.top = rect.top + "px";
+    setTimeout(() => {
+      // Always make bank word visible (whether dragging from bank or slot)
+      bankElement.classList.remove("invisible");
       if (originalElement) originalElement.classList.remove("invisible");
+      // Remove ghost
       if (gameState.draggedElement) gameState.draggedElement.remove();
-      cleanupDrag(true);
-    }
+      // Clean up without restoring to slot
+      cleanupDrag(false);
+    }, 100);
   } else {
-    const originalElement = document.querySelector(`[data-bank-index="${bankIndex}"]`);
-    if (originalElement) {
-      const rect = originalElement.getBoundingClientRect();
-      void gameState.draggedElement.offsetWidth;
-      gameState.draggedElement.style.transition = "left 0.1s linear, top 0.1s linear";
-      gameState.draggedElement.style.left = rect.left + "px";
-      gameState.draggedElement.style.top = rect.top + "px";
-      setTimeout(() => {
-        if (gameState.draggedElement) gameState.draggedElement.remove();
-        cleanupDrag(true);
-      }, 100);
-    } else {
-      if (gameState.draggedElement) gameState.draggedElement.remove();
-      cleanupDrag(true);
-    }
+    // Fallback: clean up immediately
+    if (originalElement) originalElement.classList.remove("invisible");
+    if (gameState.draggedElement) gameState.draggedElement.remove();
+    cleanupDrag(false);
   }
 }
 
