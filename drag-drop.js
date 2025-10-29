@@ -71,7 +71,7 @@ function removeWordFromSlot(slotIndex) {
     animWord.style.left = slotRect.left + 'px';
     animWord.style.top = slotRect.top + 'px';
     animWord.style.zIndex = '1000';
-    animWord.style.transition = 'all 0.3s ease-out';
+    animWord.style.transition = 'all 0.3s linear';
     
     placedWord.word.split('').forEach(letter => {
       const span = document.createElement('span');
@@ -143,7 +143,7 @@ function handleWordTap(word, bankIndex) {
     animWord.style.left = bankRect.left + 'px';
     animWord.style.top = bankRect.top + 'px';
     animWord.style.zIndex = '1000';
-    animWord.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+    animWord.style.transition = 'all 0.4s linear';
     
     word.split('').forEach(letter => {
       const span = document.createElement('span');
@@ -183,7 +183,7 @@ function placeWordInSlot(word, slotIndex, bankIndex) {
   renderSlots(levels[currentLevelIndex]);
   renderBank(levels[currentLevelIndex]);
   updateHints();
-  checkSuccess();
+  checkLevelComplete();
 }
 
 // ============================
