@@ -59,18 +59,27 @@ function removeWordFromSlot(slotIndex) {
   // Get slot and bank positions for animation
   const slotElement = document.querySelectorAll('.word-slot')[slotIndex];
   const bankArea = document.getElementById('word-bank');
+  const bankElement = document.querySelector(`.bank-word[data-bank-index="${placedWord.bankIndex}"]`);
   
-  if (slotElement && bankArea) {
+  if (slotElement && bankArea && bankElement) {
     const slotRect = slotElement.getBoundingClientRect();
-    const bankRect = bankArea.getBoundingClientRect();
+    const bankRect = bankElement.getBoundingClientRect();
     
-    // Hide the word in slot IMMEDIATELY before creating ghost
-    const cells = slotElement.querySelectorAll('.word-cell');
-    cells.forEach(cell => {
-      cell.style.visibility = 'hidden';
-    });
+    // Remove word from gameState IMMEDIATELY to clear the slot
+    gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
     
-    // Create animated ghost word element
+    // Re-render to show empty slot (but keep bank word hidden during animation)
+    renderSlots(levels[currentLevelIndex]);
+    renderBank(levels[currentLevelIndex]);
+    updateHints();
+    
+    // Hide the bank word that we're animating back to
+    const updatedBankElement = document.querySelector(`.bank-word[data-bank-index="${placedWord.bankIndex}"]`);
+    if (updatedBankElement) {
+      updatedBankElement.style.visibility = 'hidden';
+    }
+    
+    // Create animated ghost word element from slot position
     const animWord = document.createElement('div');
     animWord.className = 'bank-word';
     animWord.style.position = 'fixed';
@@ -90,21 +99,18 @@ function removeWordFromSlot(slotIndex) {
     
     // Animate to bank position
     requestAnimationFrame(() => {
-      animWord.style.left = bankRect.left + (bankRect.width / 2) + 'px';
+      animWord.style.left = bankRect.left + 'px';
       animWord.style.top = bankRect.top + 'px';
-      animWord.style.opacity = '0.5';
     });
     
     setTimeout(() => {
       animWord.remove();
-      // Remove from gameState
-      gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+      // Restore bank word visibility
+      if (updatedBankElement) {
+        updatedBankElement.style.visibility = 'visible';
+      }
       // Select this now-empty slot
       selectSlot(slotIndex);
-      // Re-render
-      renderSlots(levels[currentLevelIndex]);
-      renderBank(levels[currentLevelIndex]);
-      updateHints();
     }, 300);
   } else {
     // Fallback without animation
@@ -142,7 +148,7 @@ function handleWordTap(word, bankIndex) {
     const bankRect = bankElement.getBoundingClientRect();
     const slotRect = slotElement.getBoundingClientRect();
     
-    // Hide original word IMMEDIATELY before creating ghost
+    // Hide original bank word IMMEDIATELY before creating ghost
     bankElement.style.visibility = 'hidden';
     
     // Create animated ghost word element
@@ -163,26 +169,27 @@ function handleWordTap(word, bankIndex) {
     
     document.body.appendChild(animWord);
     
-    // Animate to slot position
+    // Animate ghost to slot position
     requestAnimationFrame(() => {
       animWord.style.left = slotRect.left + 'px';
       animWord.style.top = slotRect.top + 'px';
     });
     
     setTimeout(() => {
+      // Remove ghost
       animWord.remove();
       
       // Check if constraints are satisfied
       if (!constraintCheck.valid) {
-        // Show error and animate back
+        // Show error and restore bank word
         if (constraintCheck.reason === 'hint' && constraintCheck.cellIndex !== undefined) {
           showErrorAtSlotCell(selectedSlot, constraintCheck.cellIndex);
         }
         
-        // Restore original word visibility
+        // Restore original bank word visibility
         bankElement.style.visibility = 'visible';
       } else {
-        // Place word in slot
+        // Place word in slot (bank word stays hidden, will be shown as invisible in renderBank)
         placeWordInSlot(word, selectedSlot, bankIndex);
       }
     }, 400);
