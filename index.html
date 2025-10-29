@@ -49,14 +49,6 @@
       <input id="editor-word-input" type="text" placeholder="Enter word (e.g., VIEW)" maxlength="12" style="width:100%; margin-bottom:10px;">
       <button id="editor-add-word" style="width:100%; margin-bottom:10px;">Add Word</button>
       
-      <!-- Word List Section -->
-      <div id="editor-word-list-section" style="margin-top:15px; margin-bottom:15px;">
-        <h3 style="font-size:14px; margin-bottom:8px; color:#555;">Words Added:</h3>
-        <div id="editor-word-list" style="max-height:150px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#fafafa;">
-          <!-- Words will be dynamically added here -->
-        </div>
-      </div>
-      
       <!-- Draw Toggle -->
       <div style="margin-bottom:15px; padding:10px; background:#f0f0f0; border-radius:6px;">
         <label style="display:flex; align-items:center; cursor:pointer; font-size:14px; font-weight:bold;">
@@ -86,12 +78,25 @@
         <div id="editor-word-bank"></div>
       </div>
     </div>
-    <!-- Connection List Panel (Right Side) -->
-    <div id="editor-connection-panel" style="min-width:200px; max-width:200px; padding:20px; background:white; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.1); height:fit-content;">
-      <h3 style="font-size:16px; margin-bottom:12px; color:#333;">Connections</h3>
-      <div id="editor-connection-list" style="max-height:400px; overflow-y:auto;">
-        <!-- Connections will be listed here -->
+    <!-- Right Panel: Words and Connections -->
+    <div id="editor-right-panel" style="min-width:200px; max-width:200px; padding:20px; background:white; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.1); height:fit-content; max-height:90vh; overflow-y:auto;">
+      
+      <!-- Words List Section -->
+      <div style="margin-bottom:24px;">
+        <h3 style="font-size:16px; margin-bottom:12px; color:#333;">Words Added</h3>
+        <div id="editor-word-list" style="max-height:250px; overflow-y:auto;">
+          <!-- Words will be listed here -->
+        </div>
       </div>
+      
+      <!-- Connections List Section -->
+      <div>
+        <h3 style="font-size:16px; margin-bottom:12px; color:#333;">Connections</h3>
+        <div id="editor-connection-list" style="max-height:300px; overflow-y:auto;">
+          <!-- Connections will be listed here -->
+        </div>
+      </div>
+      
     </div>
   </div>
   

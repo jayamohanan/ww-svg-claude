@@ -55,7 +55,8 @@ function setupNewEditorListeners() {
     }
   };
   
-  document.getElementById("editor-add-word").onclick = () => {
+  // Add word function (reusable)
+  const addWord = () => {
     const input = document.getElementById("editor-word-input");
     const word = input.value.trim().toUpperCase();
     if (word) {
@@ -85,6 +86,17 @@ function setupNewEditorListeners() {
       updateWordList(); // Update the word list display
     }
   };
+  
+  // Add word button click
+  document.getElementById("editor-add-word").onclick = addWord;
+  
+  // Add word on Enter key press
+  document.getElementById("editor-word-input").addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addWord();
+    }
+  });
   document.getElementById("editor-add-conn").onclick = () => {
     const input = document.getElementById("editor-conn-input");
     const conn = input.value.trim();
@@ -411,14 +423,14 @@ function updateWordList() {
   wordListContainer.innerHTML = '';
   
   if (editorLevel.bank.length === 0) {
-    wordListContainer.innerHTML = '<div style="color:#999; font-size:12px; text-align:center;">No words added yet</div>';
+    wordListContainer.innerHTML = '<div style="color:#999; font-size:12px; text-align:center; padding:8px;">No words added yet</div>';
     return;
   }
   
   // Create list items for each word
   editorLevel.bank.forEach((word, index) => {
     const wordItem = document.createElement('div');
-    wordItem.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:white; border-radius:4px; border:1px solid #ddd;';
+    wordItem.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 8px; margin-bottom:6px; background:#f5f5f5; border-radius:4px; border:1px solid #ddd;';
     
     const wordText = document.createElement('span');
     wordText.textContent = word;
@@ -427,7 +439,7 @@ function updateWordList() {
     const deleteBtn = document.createElement('button');
     deleteBtn.innerHTML = '×';
     deleteBtn.title = 'Delete word';
-    deleteBtn.style.cssText = 'background:#f44336; color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0;';
+    deleteBtn.style.cssText = 'background:#f44336; color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; padding:0;';
     deleteBtn.onclick = () => deleteWord(index);
     
     // Hover effect
