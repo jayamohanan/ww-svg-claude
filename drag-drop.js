@@ -64,7 +64,13 @@ function removeWordFromSlot(slotIndex) {
     const slotRect = slotElement.getBoundingClientRect();
     const bankRect = bankArea.getBoundingClientRect();
     
-    // Create animated word element
+    // Hide the word in slot IMMEDIATELY before creating ghost
+    const cells = slotElement.querySelectorAll('.word-cell');
+    cells.forEach(cell => {
+      cell.style.visibility = 'hidden';
+    });
+    
+    // Create animated ghost word element
     const animWord = document.createElement('div');
     animWord.className = 'bank-word';
     animWord.style.position = 'fixed';
@@ -125,8 +131,8 @@ function handleWordTap(word, bankIndex) {
   const alreadyFilled = gameState.placedWords.some(pw => pw.slotIndex === selectedSlot);
   if (alreadyFilled) return;
   
-  // Check if word length matches slot length
-  if (word.length !== slot.length) return;
+  // Validate constraints BEFORE animation
+  const constraintCheck = checkConstraints(word, selectedSlot);
   
   // Get positions for animation
   const bankElement = document.querySelector(`.bank-word[data-bank-index="${bankIndex}"]`);
@@ -136,7 +142,10 @@ function handleWordTap(word, bankIndex) {
     const bankRect = bankElement.getBoundingClientRect();
     const slotRect = slotElement.getBoundingClientRect();
     
-    // Create animated word element
+    // Hide original word IMMEDIATELY before creating ghost
+    bankElement.style.visibility = 'hidden';
+    
+    // Create animated ghost word element
     const animWord = document.createElement('div');
     animWord.className = 'bank-word';
     animWord.style.position = 'fixed';
@@ -162,12 +171,27 @@ function handleWordTap(word, bankIndex) {
     
     setTimeout(() => {
       animWord.remove();
-      // Place word in slot
-      placeWordInSlot(word, selectedSlot, bankIndex);
+      
+      // Check if constraints are satisfied
+      if (!constraintCheck.valid) {
+        // Show error and animate back
+        if (constraintCheck.reason === 'hint' && constraintCheck.cellIndex !== undefined) {
+          showErrorAtSlotCell(selectedSlot, constraintCheck.cellIndex);
+        }
+        
+        // Restore original word visibility
+        bankElement.style.visibility = 'visible';
+      } else {
+        // Place word in slot
+        placeWordInSlot(word, selectedSlot, bankIndex);
+      }
     }, 400);
   } else {
     // Fallback without animation
-    placeWordInSlot(word, selectedSlot, bankIndex);
+    const constraintCheck = checkConstraints(word, selectedSlot);
+    if (constraintCheck.valid) {
+      placeWordInSlot(word, selectedSlot, bankIndex);
+    }
   }
 }
 
@@ -546,4 +570,15 @@ function showError(x, y) {
   document.body.appendChild(errorX);
   
   setTimeout(() => errorX.remove(), 700);
+}
+
+function showErrorAtSlotCell(slotIndex, cellIndex) {
+  const slotElement = document.querySelectorAll('.word-slot')[slotIndex];
+  if (!slotElement) return;
+  
+  const cellElement = slotElement.querySelector(`[data-cell-index="${cellIndex}"]`);
+  if (!cellElement) return;
+  
+  const rect = cellElement.getBoundingClientRect();
+  showError(rect.left + rect.width / 2, rect.top + rect.height / 2);
 }
