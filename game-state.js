@@ -10,7 +10,8 @@ let gameState = {
   dragData: null,
   // Mobile tap-to-select state
   selectedSlotIndex: null, // Currently selected slot for mobile tap mode
-  isMobile: false // Will be set based on device detection
+  isMobile: false, // Will be set based on device detection
+  isAnimating: false // Prevents multiple simultaneous animations on mobile
 };
 
 // Track undo state
