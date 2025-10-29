@@ -25,7 +25,7 @@ function renderSlots(level, force = false) {
       
       // Apply selection styling for mobile
       if (isSelected && !placedWord) {
-        slotDiv.style.animation = 'slot-bounce 0.6s ease-in-out infinite';
+        slotDiv.style.animation = 'slot-flicker 1s ease-in-out infinite';
       } else {
         slotDiv.style.animation = '';
       }
@@ -92,7 +92,7 @@ function renderSlots(level, force = false) {
     
     // Apply selection styling for mobile
     if (isSelected && !placedWord) {
-      slotDiv.style.animation = 'slot-bounce 0.6s ease-in-out infinite';
+      slotDiv.style.animation = 'slot-flicker 1s ease-in-out infinite';
     }
     
     for (let i = 0; i < slotLength; i++) {

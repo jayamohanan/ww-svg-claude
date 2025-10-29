@@ -449,12 +449,12 @@ body {
   }
 }
 
-@keyframes slot-bounce {
+@keyframes slot-flicker {
   0%, 100% {
-    transform: scale(1);
+    border-color: var(--color-border-default);
   }
   50% {
-    transform: scale(1.05);
+    border-color: #4caf50;
   }
 }
 
