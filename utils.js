@@ -14,10 +14,28 @@ function isEditorMode() {
   return isEditor;
 }
 
-function parseCellPosition(str) {
-  const slotIndex = parseInt(str[0]);
-  const cellIndex = parseInt(str[1]);
-  const side = parseInt(str[2]);
+function parseCellPosition(str) {  
+  // Handle undefined or null
+  if (!str) {
+    console.error('parseCellPosition received undefined or null:', str);
+    return { slotIndex: 0, cellIndex: 0, side: 0 };
+  }
+  
+  // Ensure str is a string
+  str = String(str).trim();
+  
+  // Extract the 3-digit code (e.g., "022" from "022-100" or just "022")
+  const match = str.match(/(\d{3})/);
+  if (!match) {
+    console.error('Invalid cell position format:', str);
+    return { slotIndex: 0, cellIndex: 0, side: 0 };
+  }
+  
+  const code = match[1];
+  const slotIndex = parseInt(code[0]);
+  const cellIndex = parseInt(code[1]);
+  const side = parseInt(code[2]);
+  
   return { slotIndex, cellIndex, side };
 }
 

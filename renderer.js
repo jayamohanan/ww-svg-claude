@@ -195,7 +195,7 @@ function renderConnections(level) {
   svg.setAttribute("height", rect.height);
   
   level.connections.forEach(conn => {
-    const [from, to] = conn.split(",");
+    const [from, to] = conn.split("-");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
     

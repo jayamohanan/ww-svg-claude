@@ -333,7 +333,7 @@ function renderEditorConnections() {
   svg.setAttribute("height", rect.height);
   
   editorLevel.connections.forEach(conn => {
-    const [from, to] = conn.split(",");
+    const [from, to] = conn.split("-");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
     

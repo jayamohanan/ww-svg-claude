@@ -20,7 +20,6 @@ function loadLevels() {
       }
     })
     .catch(function(e) {
-      levels = [];
       console.error('Error loading levels.json:', e);
     });
 }
@@ -82,7 +81,7 @@ function updateHints() {
   }
   // Now apply hints only to relevant cells
   level.connections.forEach(conn => {
-    const [from, to] = conn.split(",");
+    const [from, to] = conn.split("-");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
     const fromPlaced = gameState.placedWords.find(pw => pw.slotIndex === fromPos.slotIndex);
@@ -119,7 +118,7 @@ function checkConstraints(word, slotIndex) {
   }
   // Check connection constraints and hint mismatches
   for (const conn of level.connections) {
-    const [from, to] = conn.split(",");
+    const [from, to] = conn.split("-");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
     // If placing in fromPos slot, check against toPos slot
@@ -171,7 +170,7 @@ function checkLevelComplete() {
   
   // Check all connections are satisfied
   for (const conn of level.connections) {
-    const [from, to] = conn.split(",");
+    const [from, to] = conn.split("-");
     const fromPos = parseCellPosition(from);
     const toPos = parseCellPosition(to);
     
