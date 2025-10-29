@@ -43,41 +43,22 @@ function handleSlotTap(slotIndex) {
   const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
   
   if (placedWord) {
-    // Slot is filled - remove word and select this slot
-    removeWordFromSlot(slotIndex);
+    // Slot is filled - remove word with animation, then use desktop removeWordFromSlot
+    animateWordRemoval(slotIndex, placedWord);
   } else {
     // Slot is empty - just select it
     selectSlot(slotIndex);
   }
 }
 
-// Remove word from slot and animate back to bank
-function removeWordFromSlot(slotIndex) {
-  const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
-  if (!placedWord) return;
-  
-  // Get slot and bank positions for animation
+// Animate word removal (mobile only) - after animation, calls desktop removeWordFromSlot
+function animateWordRemoval(slotIndex, placedWord) {
   const slotElement = document.querySelectorAll('.word-slot')[slotIndex];
-  const bankArea = document.getElementById('word-bank');
   const bankElement = document.querySelector(`.bank-word[data-bank-index="${placedWord.bankIndex}"]`);
   
-  if (slotElement && bankArea && bankElement) {
+  if (slotElement && bankElement) {
     const slotRect = slotElement.getBoundingClientRect();
     const bankRect = bankElement.getBoundingClientRect();
-    
-    // Remove word from gameState IMMEDIATELY to clear the slot
-    gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-    
-    // Re-render to show empty slot (but keep bank word hidden during animation)
-    renderSlots(levels[currentLevelIndex]);
-    renderBank(levels[currentLevelIndex]);
-    updateHints();
-    
-    // Hide the bank word that we're animating back to
-    const updatedBankElement = document.querySelector(`.bank-word[data-bank-index="${placedWord.bankIndex}"]`);
-    if (updatedBankElement) {
-      updatedBankElement.style.visibility = 'hidden';
-    }
     
     // Create animated ghost word element from slot position
     const animWord = document.createElement('div');
@@ -97,6 +78,9 @@ function removeWordFromSlot(slotIndex) {
     
     document.body.appendChild(animWord);
     
+    // Hide bank word during animation
+    bankElement.style.visibility = 'hidden';
+    
     // Animate to bank position
     requestAnimationFrame(() => {
       animWord.style.left = bankRect.left + 'px';
@@ -105,20 +89,18 @@ function removeWordFromSlot(slotIndex) {
     
     setTimeout(() => {
       animWord.remove();
-      // Restore bank word visibility
-      if (updatedBankElement) {
-        updatedBankElement.style.visibility = 'visible';
-      }
+      bankElement.style.visibility = 'visible';
+      
+      // Use desktop's removeWordFromSlot function (from game-logic.js)
+      removeWordFromSlot(slotIndex);
+      
       // Select this now-empty slot
       selectSlot(slotIndex);
     }, 300);
   } else {
-    // Fallback without animation
-    gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+    // Fallback without animation - use desktop function directly
+    removeWordFromSlot(slotIndex);
     selectSlot(slotIndex);
-    renderSlots(levels[currentLevelIndex]);
-    renderBank(levels[currentLevelIndex]);
-    updateHints();
   }
 }
 
@@ -137,7 +119,7 @@ function handleWordTap(word, bankIndex) {
   const alreadyFilled = gameState.placedWords.some(pw => pw.slotIndex === selectedSlot);
   if (alreadyFilled) return;
   
-  // Validate constraints BEFORE animation
+  // Validate constraints BEFORE animation (use desktop function)
   const constraintCheck = checkConstraints(word, selectedSlot);
   
   // Get positions for animation
@@ -189,32 +171,23 @@ function handleWordTap(word, bankIndex) {
         // Restore original bank word visibility
         bankElement.style.visibility = 'visible';
       } else {
-        // Place word in slot (bank word stays hidden, will be shown as invisible in renderBank)
-        placeWordInSlot(word, selectedSlot, bankIndex);
+        // Use desktop's placeWord function (from game-logic.js)
+        placeWord(word, selectedSlot, bankIndex);
+        
+        // Select next unfilled slot (mobile-specific behavior)
+        gameState.selectedSlotIndex = getNextUnfilledSlot();
+        renderSlots(levels[currentLevelIndex]); // Update selection visual
       }
     }, 400);
   } else {
-    // Fallback without animation
+    // Fallback without animation - use desktop function
     const constraintCheck = checkConstraints(word, selectedSlot);
     if (constraintCheck.valid) {
-      placeWordInSlot(word, selectedSlot, bankIndex);
+      placeWord(word, selectedSlot, bankIndex);
+      gameState.selectedSlotIndex = getNextUnfilledSlot();
+      renderSlots(levels[currentLevelIndex]);
     }
   }
-}
-
-// Place word in slot (used by both drag-drop and tap-select)
-function placeWordInSlot(word, slotIndex, bankIndex) {
-  gameState.placedWords.push({ word, slotIndex, bankIndex });
-  undoStack.push({ word, slotIndex, bankIndex });
-  
-  // Select next unfilled slot
-  gameState.selectedSlotIndex = getNextUnfilledSlot();
-  
-  // Re-render
-  renderSlots(levels[currentLevelIndex]);
-  renderBank(levels[currentLevelIndex]);
-  updateHints();
-  checkLevelComplete();
 }
 
 // ============================
