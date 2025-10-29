@@ -21,29 +21,57 @@ function renderSlots(level, force = false) {
       const slotData = level.slots[slotIndex];
       const slotLength = slotData.length;
       const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
+      const isSelected = gameState.isMobile && gameState.selectedSlotIndex === slotIndex;
+      
+      // Apply selection styling for mobile
+      if (isSelected && !placedWord) {
+        slotDiv.style.animation = 'slot-bounce 0.6s ease-in-out infinite';
+      } else {
+        slotDiv.style.animation = '';
+      }
       
       for (let i = 0; i < slotLength; i++) {
         const cell = slotDiv.children[i];
         cell.className = "word-cell";
         cell.textContent = "";
+        
+        // Apply selection styling
+        if (isSelected && !placedWord) {
+          cell.style.borderColor = '#4caf50';
+          cell.style.borderWidth = '3px';
+        } else {
+          cell.style.borderColor = '';
+          cell.style.borderWidth = '';
+        }
+        
         if (placedWord) {
           cell.textContent = placedWord.word[i];
           cell.classList.add("filled");
         }
       }
-      // Update drag handlers and cursor
-      slotDiv.style.cursor = placedWord ? "grab" : "";
+      
+      // Update handlers based on mobile/desktop
       slotDiv.onmousedown = null;
       slotDiv.ontouchstart = null;
-      if (placedWord) {
-        slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
-        slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
+      slotDiv.onclick = null;
+      
+      if (gameState.isMobile) {
+        // Mobile: tap to select/deselect
+        slotDiv.onclick = () => handleSlotTap(slotIndex);
+        slotDiv.style.cursor = 'pointer';
+      } else {
+        // Desktop: drag and drop
+        slotDiv.style.cursor = placedWord ? "grab" : "";
+        if (placedWord) {
+          slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
+          slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
+        }
       }
     }
     console.log('Slots already rendered, updating content only');
     return;
   }
-  console.log('Creating slot DOM elements focerced:', force);
+  console.log('Creating slot DOM elements forced:', force);
   // Otherwise, create all slot DOM elements
   slotsContainer.innerHTML = "";
   level.slots.forEach((slotData, slotIndex) => {
@@ -60,22 +88,44 @@ function renderSlots(level, force = false) {
     
     const slotLength = slotData.length;
     const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
+    const isSelected = gameState.isMobile && gameState.selectedSlotIndex === slotIndex;
+    
+    // Apply selection styling for mobile
+    if (isSelected && !placedWord) {
+      slotDiv.style.animation = 'slot-bounce 0.6s ease-in-out infinite';
+    }
     
     for (let i = 0; i < slotLength; i++) {
       const cell = document.createElement("div");
       cell.className = "word-cell";
       cell.dataset.cellIndex = i;
+      
+      // Apply selection styling
+      if (isSelected && !placedWord) {
+        cell.style.borderColor = '#4caf50';
+        cell.style.borderWidth = '3px';
+      }
+      
       if (placedWord) {
         cell.textContent = placedWord.word[i];
         cell.classList.add("filled");
       }
       slotDiv.appendChild(cell);
     }
-    slotDiv.style.cursor = placedWord ? "grab" : "";
-    if (placedWord) {
-      slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
-      slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
+    
+    if (gameState.isMobile) {
+      // Mobile: tap to select/deselect
+      slotDiv.onclick = () => handleSlotTap(slotIndex);
+      slotDiv.style.cursor = 'pointer';
+    } else {
+      // Desktop: drag and drop
+      slotDiv.style.cursor = placedWord ? "grab" : "";
+      if (placedWord) {
+        slotDiv.onmousedown = (e) => startDragFromSlot(e, slotIndex, placedWord);
+        slotDiv.ontouchstart = (e) => startDragFromSlotTouch(e, slotIndex, placedWord);
+      }
     }
+    
     slotsContainer.appendChild(slotDiv);
   });
 }
@@ -110,12 +160,23 @@ function renderBank(level) {
       wordDiv.appendChild(cell);
     }
     
-    wordDiv.addEventListener("mousedown", (e) => {
-      if (!wordDiv.classList.contains("invisible")) startDragFromBank(e, word, bankIndex);
-    });
-    wordDiv.addEventListener("touchstart", (e) => {
-      if (!wordDiv.classList.contains("invisible")) startDragFromBankTouch(e, word, bankIndex);
-    });
+    if (gameState.isMobile) {
+      // Mobile: tap to place in selected slot
+      wordDiv.onclick = () => {
+        if (!wordDiv.classList.contains("invisible")) {
+          handleWordTap(word, bankIndex);
+        }
+      };
+      wordDiv.style.cursor = isPlaced ? '' : 'pointer';
+    } else {
+      // Desktop: drag and drop
+      wordDiv.addEventListener("mousedown", (e) => {
+        if (!wordDiv.classList.contains("invisible")) startDragFromBank(e, word, bankIndex);
+      });
+      wordDiv.addEventListener("touchstart", (e) => {
+        if (!wordDiv.classList.contains("invisible")) startDragFromBankTouch(e, word, bankIndex);
+      });
+    }
     
     wrapper.appendChild(wordDiv);
     bankContainer.appendChild(wrapper);

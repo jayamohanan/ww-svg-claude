@@ -2,6 +2,194 @@
 // DRAG AND DROP HANDLERS
 // ============================
 
+// Detect if device is mobile
+function detectMobile() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         (window.matchMedia && window.matchMedia("(max-width: 768px)").matches);
+}
+
+// Initialize mobile detection
+gameState.isMobile = detectMobile();
+
+// ============================
+// MOBILE TAP-TO-SELECT SYSTEM
+// ============================
+
+// Get next unfilled slot index
+function getNextUnfilledSlot() {
+  const level = levels[currentLevelIndex];
+  if (!level) return 0;
+  
+  for (let i = 0; i < level.slots.length; i++) {
+    const isSlotFilled = gameState.placedWords.some(pw => pw.slotIndex === i);
+    if (!isSlotFilled) {
+      return i;
+    }
+  }
+  return 0; // Fallback
+}
+
+// Select a slot (for mobile tap mode)
+function selectSlot(slotIndex) {
+  gameState.selectedSlotIndex = slotIndex;
+  renderSlots(levels[currentLevelIndex]); // Re-render to show selection
+}
+
+// Handle slot tap on mobile
+function handleSlotTap(slotIndex) {
+  if (!gameState.isMobile) return;
+  
+  // Check if slot is filled
+  const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
+  
+  if (placedWord) {
+    // Slot is filled - remove word and select this slot
+    removeWordFromSlot(slotIndex);
+  } else {
+    // Slot is empty - just select it
+    selectSlot(slotIndex);
+  }
+}
+
+// Remove word from slot and animate back to bank
+function removeWordFromSlot(slotIndex) {
+  const placedWord = gameState.placedWords.find(pw => pw.slotIndex === slotIndex);
+  if (!placedWord) return;
+  
+  // Get slot and bank positions for animation
+  const slotElement = document.querySelectorAll('.word-slot')[slotIndex];
+  const bankArea = document.getElementById('word-bank');
+  
+  if (slotElement && bankArea) {
+    const slotRect = slotElement.getBoundingClientRect();
+    const bankRect = bankArea.getBoundingClientRect();
+    
+    // Create animated word element
+    const animWord = document.createElement('div');
+    animWord.className = 'bank-word';
+    animWord.style.position = 'fixed';
+    animWord.style.left = slotRect.left + 'px';
+    animWord.style.top = slotRect.top + 'px';
+    animWord.style.zIndex = '1000';
+    animWord.style.transition = 'all 0.3s ease-out';
+    
+    placedWord.word.split('').forEach(letter => {
+      const span = document.createElement('span');
+      span.className = 'bank-letter';
+      span.textContent = letter;
+      animWord.appendChild(span);
+    });
+    
+    document.body.appendChild(animWord);
+    
+    // Animate to bank position
+    requestAnimationFrame(() => {
+      animWord.style.left = bankRect.left + (bankRect.width / 2) + 'px';
+      animWord.style.top = bankRect.top + 'px';
+      animWord.style.opacity = '0.5';
+    });
+    
+    setTimeout(() => {
+      animWord.remove();
+      // Remove from gameState
+      gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+      // Select this now-empty slot
+      selectSlot(slotIndex);
+      // Re-render
+      renderSlots(levels[currentLevelIndex]);
+      renderBank(levels[currentLevelIndex]);
+      updateHints();
+    }, 300);
+  } else {
+    // Fallback without animation
+    gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+    selectSlot(slotIndex);
+    renderSlots(levels[currentLevelIndex]);
+    renderBank(levels[currentLevelIndex]);
+    updateHints();
+  }
+}
+
+// Handle word tap on mobile
+function handleWordTap(word, bankIndex) {
+  if (!gameState.isMobile) return;
+  
+  const selectedSlot = gameState.selectedSlotIndex;
+  if (selectedSlot === null || selectedSlot === undefined) return;
+  
+  const level = levels[currentLevelIndex];
+  const slot = level.slots[selectedSlot];
+  if (!slot) return;
+  
+  // Check if slot is already filled
+  const alreadyFilled = gameState.placedWords.some(pw => pw.slotIndex === selectedSlot);
+  if (alreadyFilled) return;
+  
+  // Check if word length matches slot length
+  if (word.length !== slot.length) return;
+  
+  // Get positions for animation
+  const bankElement = document.querySelector(`.bank-word[data-bank-index="${bankIndex}"]`);
+  const slotElement = document.querySelectorAll('.word-slot')[selectedSlot];
+  
+  if (bankElement && slotElement) {
+    const bankRect = bankElement.getBoundingClientRect();
+    const slotRect = slotElement.getBoundingClientRect();
+    
+    // Create animated word element
+    const animWord = document.createElement('div');
+    animWord.className = 'bank-word';
+    animWord.style.position = 'fixed';
+    animWord.style.left = bankRect.left + 'px';
+    animWord.style.top = bankRect.top + 'px';
+    animWord.style.zIndex = '1000';
+    animWord.style.transition = 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+    
+    word.split('').forEach(letter => {
+      const span = document.createElement('span');
+      span.className = 'bank-letter';
+      span.textContent = letter;
+      animWord.appendChild(span);
+    });
+    
+    document.body.appendChild(animWord);
+    
+    // Animate to slot position
+    requestAnimationFrame(() => {
+      animWord.style.left = slotRect.left + 'px';
+      animWord.style.top = slotRect.top + 'px';
+    });
+    
+    setTimeout(() => {
+      animWord.remove();
+      // Place word in slot
+      placeWordInSlot(word, selectedSlot, bankIndex);
+    }, 400);
+  } else {
+    // Fallback without animation
+    placeWordInSlot(word, selectedSlot, bankIndex);
+  }
+}
+
+// Place word in slot (used by both drag-drop and tap-select)
+function placeWordInSlot(word, slotIndex, bankIndex) {
+  gameState.placedWords.push({ word, slotIndex, bankIndex });
+  undoStack.push({ word, slotIndex, bankIndex });
+  
+  // Select next unfilled slot
+  gameState.selectedSlotIndex = getNextUnfilledSlot();
+  
+  // Re-render
+  renderSlots(levels[currentLevelIndex]);
+  renderBank(levels[currentLevelIndex]);
+  updateHints();
+  checkSuccess();
+}
+
+// ============================
+// DRAG AND DROP (DESKTOP)
+// ============================
+
 // --- Touch event helpers ---
 function getTouchCoords(e) {
   const t = e.touches[0] || e.changedTouches[0];

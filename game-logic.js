@@ -43,6 +43,11 @@ function startLevel(index) {
   renderGame._connectionsDrawn = false;
   renderGame(true);
   document.getElementById("success-screen").classList.add("hidden");
+  
+  // Initialize mobile selection to first unfilled slot
+  if (gameState.isMobile) {
+    selectSlot(getNextUnfilledSlot());
+  }
 }
 
 function renderGame(force = false) {

@@ -7,7 +7,10 @@ let currentLevelIndex = 0;
 let gameState = {
   placedWords: [], // Array of {word, slotIndex, bankIndex}
   draggedElement: null,
-  dragData: null
+  dragData: null,
+  // Mobile tap-to-select state
+  selectedSlotIndex: null, // Currently selected slot for mobile tap mode
+  isMobile: false // Will be set based on device detection
 };
 
 // Track undo state
