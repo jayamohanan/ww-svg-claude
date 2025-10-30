@@ -657,9 +657,10 @@ body {
 }
 
 #editor-game-view {
-  width: var(--container-width);
-  height: var(--container-height);
-  max-height: var(--container-max-height);
+  width: 80vw;              /* Use 80% of viewport width for landscape */
+  height: 80vh;             /* Use 80% of viewport height */
+  max-height: none;         /* No max height restriction */
+  max-width: 1400px;        /* Reasonable max width for very large screens */
   position: relative;
   background: var(--color-bg-square);
   border-radius: var(--container-border-radius);
