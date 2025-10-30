@@ -84,8 +84,8 @@
 /* Mobile devices - full viewport fit */
 @media (max-width: 768px) {
   :root {
-    --square-size: 60px;           /* Was 30px, now 2x */
-    --square-font-size: 34px;      /* Was 17px, now 2x */
+    --square-size: 45px;           /* Was 30px, now 1.5x */
+    --square-font-size: 26px;      /* Was 17px, now 1.5x (rounded) */
     --spacing-xl: 30px;
     --container-width: var(--mobile-container-width);
     --container-height: var(--mobile-container-height);
@@ -96,8 +96,8 @@
 
 @media (max-width: 500px) {
   :root {
-    --square-size: 48px;           /* Was 24px, now 2x */
-    --square-font-size: 28px;      /* Was 14px, now 2x */
+    --square-size: 36px;           /* Was 24px, now 1.5x */
+    --square-font-size: 21px;      /* Was 14px, now 1.5x */
     --spacing-xl: 25px;
     --container-width: var(--mobile-container-width);
     --container-height: var(--mobile-container-height);
@@ -108,8 +108,8 @@
 
 @media (max-width: 350px) {
   :root {
-    --square-size: 36px;           /* Was 18px, now 2x */
-    --square-font-size: 22px;      /* Was 11px, now 2x */
+    --square-size: 27px;           /* Was 18px, now 1.5x */
+    --square-font-size: 17px;      /* Was 11px, now 1.5x (rounded) */
     --spacing-xl: 20px;
     --container-width: var(--mobile-container-width);
     --container-height: var(--mobile-container-height);
