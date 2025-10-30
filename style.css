@@ -720,6 +720,24 @@ body {
   width: 100%;
 }
 
+/* ===== WORD SUGGESTIONS POPUP ===== */
+#word-suggestions-popup {
+  font-family: Arial, sans-serif;
+}
+
+#word-suggestions-popup button {
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+#word-suggestions-popup button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+#word-suggestions-popup button:active {
+  transform: translateY(0);
+}
+
 /* ===== UTILITY CLASSES ===== */
 .hidden {
   display: none !important;

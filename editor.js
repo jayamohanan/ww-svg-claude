@@ -55,32 +55,73 @@ function setupNewEditorListeners() {
     }
   };
   
+  // Create Slots button (independent of words)
+  document.getElementById("editor-create-slots").onclick = () => {
+    const slotLength = parseInt(document.getElementById("editor-slot-length").value);
+    const slotCount = parseInt(document.getElementById("editor-slot-count").value);
+    
+    if (slotLength && slotCount) {
+      const step = CONFIG.gridStep;
+      const slotsArea = document.getElementById('editor-word-slots-area');
+      const areaWidth = slotsArea ? slotsArea.offsetWidth : 1;
+      
+      for (let i = 0; i < slotCount; i++) {
+        let xCenter = 50;
+        // For even length, offset by half a step to the left (in percent)
+        if (slotLength % 2 === 0) {
+          xCenter = 50 - ((step / 2) / areaWidth) * 100;
+        }
+        
+        // Distribute slots vertically if creating multiple
+        const yPosition = slotCount > 1 ? 30 + (i * (40 / (slotCount - 1))) : 50;
+        
+        const newSlot = {
+          length: slotLength,
+          x: xCenter,
+          y: yPosition
+        };
+        
+        console.log('Creating slot:', newSlot);
+        editorLevel.slots.push(newSlot);
+      }
+      
+      renderEditorGameView();
+    }
+  };
+  
   // Add word function (reusable)
   const addWord = () => {
     const input = document.getElementById("editor-word-input");
     const word = input.value.trim().toUpperCase();
+    const addSlotsChecked = document.getElementById("editor-add-slots-toggle").checked;
+    
     if (word) {
       editorLevel.bank.push(word);
-      // Add a slot with the same length, positioned at center for the first slot
-      const slotCount = editorLevel.slots.length;
-      let newSlot;
-      // Calculate x so that the slot's center aligns with grid cell centers for odd, and with grid cell edges for even
-      // For even length, offset by half a grid step to the left (in percent)
-      const step = CONFIG.gridStep;
-      const slotsArea = document.getElementById('editor-word-slots-area');
-      const areaWidth = slotsArea ? slotsArea.offsetWidth : 1;
-      let xCenter = 50;
-      if (word.length % 2 === 0) {
-        // Offset by half a step to the left (in percent)
-        xCenter = 50 - ((step / 2) / areaWidth) * 100;
+      
+      // Only add slot if toggle is checked
+      if (addSlotsChecked) {
+        // Add a slot with the same length, positioned at center for the first slot
+        const slotCount = editorLevel.slots.length;
+        let newSlot;
+        // Calculate x so that the slot's center aligns with grid cell centers for odd, and with grid cell edges for even
+        // For even length, offset by half a grid step to the left (in percent)
+        const step = CONFIG.gridStep;
+        const slotsArea = document.getElementById('editor-word-slots-area');
+        const areaWidth = slotsArea ? slotsArea.offsetWidth : 1;
+        let xCenter = 50;
+        if (word.length % 2 === 0) {
+          // Offset by half a step to the left (in percent)
+          xCenter = 50 - ((step / 2) / areaWidth) * 100;
+        }
+        newSlot = {
+          length: word.length,
+          x: xCenter,
+          y: 50
+        };
+        console.log('Adding new slot:', newSlot);
+        editorLevel.slots.push(newSlot);
       }
-      newSlot = {
-        length: word.length,
-        x: xCenter,
-        y: 50
-      };
-      console.log('Adding new slot:', newSlot);
-      editorLevel.slots.push(newSlot);
+      
       input.value = "";
       renderEditorGameView();
       updateWordList(); // Update the word list display
@@ -113,11 +154,18 @@ function setupNewEditorListeners() {
     editorLevel.bank = shuffleArray(editorLevel.bank);
     renderEditorGameView();
   };
-  document.getElementById("editor-save").onclick = () => {
-    saveLevels();
+  document.getElementById("editor-build-words").onclick = () => {
+    buildWordsFromSlots();
   };
   document.getElementById("editor-exit").onclick = () => {
     window.location.href = "index.html";
+  };
+  // Setup word suggestions popup handlers
+  document.getElementById("word-suggestions-confirm").onclick = () => {
+    confirmWordSelection();
+  };
+  document.getElementById("word-suggestions-cancel").onclick = () => {
+    closeWordSuggestionsPopup();
   };
   // Add button to show JSON
   let jsonBtn = document.getElementById("editor-show-json");
@@ -146,10 +194,8 @@ function showEditorLevelJSON() {
   jsonArea.select();
 }
 
-function saveLevels() {
-  // Saving to file is not possible from browser JS, so just show JSON for manual copy-paste
-  showEditorLevelJSON();
-}
+// Removed saveLevels() function - it was redundant with showEditorLevelJSON()
+// The "Save Level" button has been removed from the UI
 
 function renderEditorGameView() {
   const slotsArea = document.getElementById("editor-word-slots-area");
@@ -673,4 +719,341 @@ function deleteConnection(index) {
   editorLevel.connections.splice(index, 1);
   updateConnectionList();
   renderEditorGameView();
+}
+
+// ============================
+// WORD BUILDING FROM SLOTS
+// ============================
+
+let wordsDatabase = null; // Cache for loaded words
+let selectedWordCombo = null;
+
+// Load words from CSV
+async function loadWordsFromCSV() {
+  if (wordsDatabase) return wordsDatabase; // Return cached data
+  
+  try {
+    const response = await fetch('words.csv');
+    const text = await response.text();
+    const lines = text.split('\n');
+    const wordsByLength = {};
+    
+    // Skip header, parse CSV
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const [word, length] = line.split(',');
+      if (word && length) {
+        const len = parseInt(length);
+        const cleanWord = word.trim().toLowerCase();
+        if (!wordsByLength[len]) wordsByLength[len] = [];
+        wordsByLength[len].push(cleanWord);
+      }
+    }
+    
+    // Shuffle each length array for randomness
+    for (const len in wordsByLength) {
+      wordsByLength[len] = shuffleArray(wordsByLength[len]);
+    }
+    
+    wordsDatabase = wordsByLength;
+    return wordsDatabase;
+  } catch (error) {
+    console.error('Error loading words.csv:', error);
+    return null;
+  }
+}
+
+// Parse connection string to match Python format
+// Python parses "002-120" as: left[0]=slot, left[1]=index, right[0]=slot, right[1]=index
+// So "002-120" means slot 0 index 0 connects to slot 1 index 2
+function parseConnection(connStr) {
+  // Handle both comma and dash separators
+  const separator = connStr.includes(',') ? ',' : '-';
+  const parts = connStr.split(separator);
+  if (parts.length !== 2) return null;
+  
+  const left = parts[0].trim();
+  const right = parts[1].trim();
+  
+  // Must be at least 2 characters each (slot + index)
+  if (left.length < 2 || right.length < 2) return null;
+  
+  // Parse only first 2 characters like Python does
+  // Format: [slot_1digit][index_1digit]
+  // Example: "002" -> slot 0, index 0 (ignores the '2')
+  // Example: "120" -> slot 1, index 2 (ignores the '0')
+  return {
+    slotA: parseInt(left[0]),
+    indexA: parseInt(left[1]),
+    slotB: parseInt(right[0]),
+    indexB: parseInt(right[1])
+  };
+}
+
+// Check if partial word combination is valid
+function isValidPartial(wordsSoFar, connections) {
+  for (const conn of connections) {
+    const { slotA, indexA, slotB, indexB } = conn;
+    
+    if (slotA < wordsSoFar.length && slotB < wordsSoFar.length) {
+      const wordA = wordsSoFar[slotA];
+      const wordB = wordsSoFar[slotB];
+      
+      if (wordA && wordB) {
+        const charA = wordA[indexA];
+        const charB = wordB[indexB];
+        
+        // Debug log for first few checks
+        if (wordsSoFar.length === connections.length) {
+          console.log(`Connection check: slot${slotA}[${indexA}]='${charA}' vs slot${slotB}[${indexB}]='${charB}' -> ${charA === charB ? '✓' : '✗'}`);
+        }
+        
+        if (charA !== charB) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+// Find word combinations using backtracking
+function findWordCombinations(wordsByLength, slotLengths, connections, maxResults = 5) {
+  const numSlots = slotLengths.length;
+  const results = [];
+  const usedWordsByPosition = Array(numSlots).fill(null).map(() => new Set());
+  
+  // Get word arrays for each slot length
+  const wordArrays = slotLengths.map(len => wordsByLength[len] || []);
+  
+  // Check if we have words for all lengths
+  for (let i = 0; i < slotLengths.length; i++) {
+    if (!wordArrays[i] || wordArrays[i].length === 0) {
+      console.warn(`No words found for length ${slotLengths[i]} (slot ${i})`);
+      return [];
+    }
+    console.log(`Slot ${i}: ${wordArrays[i].length} words of length ${slotLengths[i]}`);
+  }
+  
+  let attemptCount = 0;
+  let validPartialCount = 0;
+  
+  function backtrack(current) {
+    if (results.length >= maxResults) return;
+    
+    if (current.length === numSlots) {
+      // Check if this combination has new words in each position
+      let isNew = true;
+      for (let i = 0; i < current.length; i++) {
+        if (usedWordsByPosition[i].has(current[i])) {
+          isNew = false;
+          break;
+        }
+      }
+      
+      if (isNew) {
+        console.log(`✓ Found valid combination: [${current.map(w => w.toUpperCase()).join(', ')}]`);
+        results.push([...current]);
+        // Mark words as used for their positions
+        for (let i = 0; i < current.length; i++) {
+          usedWordsByPosition[i].add(current[i]);
+        }
+      }
+      return;
+    }
+    
+    const slotIndex = current.length;
+    const words = wordArrays[slotIndex];
+    
+    for (const word of words) {
+      attemptCount++;
+      
+      // Check if word is already used (no repeats)
+      if (current.includes(word)) continue;
+      
+      const newCombo = [...current, word];
+      if (isValidPartial(newCombo, connections)) {
+        validPartialCount++;
+        backtrack(newCombo);
+        if (results.length >= maxResults) return;
+      }
+    }
+  }
+  
+  console.log(`Starting backtracking search for ${numSlots} slots...`);
+  backtrack([]);
+  console.log(`Search complete: ${attemptCount} attempts, ${validPartialCount} valid partials, ${results.length} results`);
+  
+  return results;
+}
+
+// Main function to build words
+async function buildWordsFromSlots() {
+  const popup = document.getElementById('word-suggestions-popup');
+  const statusDiv = document.getElementById('word-suggestions-status');
+  const listDiv = document.getElementById('word-suggestions-list');
+  
+  // Show popup
+  popup.style.display = 'flex';
+  statusDiv.textContent = 'Loading words database...';
+  statusDiv.style.background = '#e3f2fd';
+  statusDiv.style.color = '#1976d2';
+  listDiv.innerHTML = '';
+  
+  // Check if we have slots
+  if (!editorLevel.slots || editorLevel.slots.length === 0) {
+    statusDiv.textContent = '❌ No slots found! Create some slots first.';
+    statusDiv.style.background = '#ffebee';
+    statusDiv.style.color = '#c62828';
+    return;
+  }
+  
+  // Load words
+  const wordsDb = await loadWordsFromCSV();
+  if (!wordsDb) {
+    statusDiv.textContent = '❌ Failed to load words.csv';
+    statusDiv.style.background = '#ffebee';
+    statusDiv.style.color = '#c62828';
+    return;
+  }
+  
+  statusDiv.textContent = 'Calculating combinations...';
+  
+  // Get slot lengths
+  const slotLengths = editorLevel.slots.map(slot => slot.length);
+  
+  // Parse connections and validate indices
+  const connections = [];
+  for (const connStr of editorLevel.connections || []) {
+    const conn = parseConnection(connStr);
+    if (conn) {
+      // Validate that indices are within word bounds
+      const maxIndexA = slotLengths[conn.slotA] - 1;
+      const maxIndexB = slotLengths[conn.slotB] - 1;
+      
+      if (conn.indexA > maxIndexA || conn.indexB > maxIndexB) {
+        console.error(`Invalid connection "${connStr}": slot${conn.slotA} has length ${slotLengths[conn.slotA]} (max index ${maxIndexA}), slot${conn.slotB} has length ${slotLengths[conn.slotB]} (max index ${maxIndexB})`);
+        statusDiv.textContent = `❌ Invalid connection "${connStr}": Index out of bounds for word length!`;
+        statusDiv.style.background = '#ffebee';
+        statusDiv.style.color = '#c62828';
+        return;
+      }
+      
+      connections.push(conn);
+      console.log(`Parsed connection "${connStr}": slot${conn.slotA}[${conn.indexA}] <-> slot${conn.slotB}[${conn.indexB}]`);
+    } else {
+      console.error(`Failed to parse connection: "${connStr}"`);
+    }
+  }
+  
+  console.log('Slot lengths:', slotLengths);
+  console.log('Connections parsed:', connections);
+  
+  // Find combinations (run in setTimeout to allow UI to update)
+  setTimeout(() => {
+    const combinations = findWordCombinations(wordsDb, slotLengths, connections, 5);
+    
+    if (combinations.length === 0) {
+      statusDiv.textContent = '❌ No valid word combinations found. Try different slot lengths or connections.';
+      statusDiv.style.background = '#ffebee';
+      statusDiv.style.color = '#c62828';
+      return;
+    }
+    
+    statusDiv.textContent = `✅ Found ${combinations.length} combination${combinations.length > 1 ? 's' : ''}`;
+    statusDiv.style.background = '#e8f5e9';
+    statusDiv.style.color = '#2e7d32';
+    
+    // Display combinations
+    listDiv.innerHTML = '';
+    combinations.forEach((combo, index) => {
+      const comboDiv = document.createElement('div');
+      comboDiv.style.cssText = 'margin-bottom:12px; padding:12px; background:#f5f5f5; border-radius:6px; cursor:pointer; border:2px solid transparent; transition:all 0.2s;';
+      
+      const comboLabel = document.createElement('div');
+      comboLabel.style.cssText = 'display:flex; align-items:center; margin-bottom:8px;';
+      
+      const radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'word-combo';
+      radio.value = index;
+      radio.id = `combo-${index}`;
+      radio.style.cssText = 'margin-right:10px; width:18px; height:18px; cursor:pointer;';
+      
+      const label = document.createElement('label');
+      label.htmlFor = `combo-${index}`;
+      label.style.cssText = 'font-weight:bold; color:#333; cursor:pointer; flex:1;';
+      label.textContent = `Combination ${index + 1}`;
+      
+      comboLabel.appendChild(radio);
+      comboLabel.appendChild(label);
+      
+      const wordsDiv = document.createElement('div');
+      wordsDiv.style.cssText = 'padding-left:28px; font-family:monospace; color:#555; font-size:14px;';
+      wordsDiv.textContent = combo.map(w => w.toUpperCase()).join(', ');
+      
+      comboDiv.appendChild(comboLabel);
+      comboDiv.appendChild(wordsDiv);
+      
+      // Click handler
+      const selectCombo = () => {
+        radio.checked = true;
+        selectedWordCombo = combo;
+        // Highlight selected
+        document.querySelectorAll('#word-suggestions-list > div').forEach(div => {
+          div.style.borderColor = 'transparent';
+          div.style.background = '#f5f5f5';
+        });
+        comboDiv.style.borderColor = '#4caf50';
+        comboDiv.style.background = '#e8f5e9';
+      };
+      
+      comboDiv.onclick = selectCombo;
+      radio.onchange = selectCombo;
+      
+      listDiv.appendChild(comboDiv);
+    });
+    
+    // Auto-select first combination
+    if (combinations.length > 0) {
+      document.getElementById('combo-0').click();
+    }
+  }, 100);
+}
+
+function confirmWordSelection() {
+  if (!selectedWordCombo) {
+    alert('Please select a word combination');
+    return;
+  }
+  
+  const shouldShuffle = document.getElementById('word-suggestions-shuffle').checked;
+  
+  // Clear existing bank
+  editorLevel.bank = [];
+  
+  // Add words
+  for (const word of selectedWordCombo) {
+    editorLevel.bank.push(word.toUpperCase());
+  }
+  
+  // Shuffle if requested
+  if (shouldShuffle) {
+    editorLevel.bank = shuffleArray(editorLevel.bank);
+  }
+  
+  // Close popup and update view
+  closeWordSuggestionsPopup();
+  renderEditorGameView();
+  updateWordList();
+  
+  console.log('Added words:', editorLevel.bank);
+}
+
+function closeWordSuggestionsPopup() {
+  const popup = document.getElementById('word-suggestions-popup');
+  popup.style.display = 'none';
+  selectedWordCombo = null;
 }
