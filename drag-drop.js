@@ -53,12 +53,21 @@ function handleSlotTap(slotIndex) {
 
 // Animate word removal (mobile only) - after animation, calls desktop removeWordFromSlot
 function animateWordRemoval(slotIndex, placedWord) {
+  // Lock animations to prevent simultaneous taps
+  if (gameState.isAnimating) return;
+  gameState.isAnimating = true;
+  
   const slotElement = document.querySelectorAll('.word-slot')[slotIndex];
   const bankElement = document.querySelector(`.bank-word[data-bank-index="${placedWord.bankIndex}"]`);
   
   if (slotElement && bankElement) {
     const slotRect = slotElement.getBoundingClientRect();
     const bankRect = bankElement.getBoundingClientRect();
+    
+    // IMMEDIATELY remove word from slot and update UI (before animation starts)
+    gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
+    gameState.selectedSlotIndex = slotIndex; // Select this now-empty slot
+    renderGame(); // Update UI: remove word from slot, show hints, show selection
     
     // Create animated ghost word element from slot position
     const animWord = document.createElement('div');
@@ -91,19 +100,14 @@ function animateWordRemoval(slotIndex, placedWord) {
       animWord.remove();
       bankElement.style.visibility = 'visible';
       
-      // Remove word from slot (updates state)
-      gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
-      
-      // Select this now-empty slot
-      gameState.selectedSlotIndex = slotIndex;
-      
-      // Single renderGame() call to update everything: slots with selection, hints, and bank
-      renderGame();
+      // Unlock animations
+      gameState.isAnimating = false;
     }, 300);
   } else {
     // Fallback without animation - use desktop function directly
     removeWordFromSlot(slotIndex);
     selectSlot(slotIndex);
+    gameState.isAnimating = false;
   }
 }
 
@@ -111,16 +115,29 @@ function animateWordRemoval(slotIndex, placedWord) {
 function handleWordTap(word, bankIndex) {
   if (!gameState.isMobile) return;
   
+  // Lock to prevent simultaneous taps
+  if (gameState.isAnimating) return;
+  gameState.isAnimating = true;
+  
   const selectedSlot = gameState.selectedSlotIndex;
-  if (selectedSlot === null || selectedSlot === undefined) return;
+  if (selectedSlot === null || selectedSlot === undefined) {
+    gameState.isAnimating = false;
+    return;
+  }
   
   const level = levels[currentLevelIndex];
   const slot = level.slots[selectedSlot];
-  if (!slot) return;
+  if (!slot) {
+    gameState.isAnimating = false;
+    return;
+  }
   
   // Check if slot is already filled
   const alreadyFilled = gameState.placedWords.some(pw => pw.slotIndex === selectedSlot);
-  if (alreadyFilled) return;
+  if (alreadyFilled) {
+    gameState.isAnimating = false;
+    return;
+  }
   
   // Validate constraints BEFORE animation (use desktop function)
   const constraintCheck = checkConstraints(word, selectedSlot);
@@ -173,14 +190,22 @@ function handleWordTap(word, bankIndex) {
         
         // Restore original bank word visibility
         bankElement.style.visibility = 'visible';
+        
+        // Unlock animations
+        gameState.isAnimating = false;
       } else {
         // Use desktop's placeWord function (from game-logic.js)
         // It calls renderGame() which updates everything including hints
         placeWord(word, selectedSlot, bankIndex);
         
         // Select next unfilled slot (mobile-specific behavior)
-        // renderGame() already called by placeWord(), so selection visual will update automatically
         gameState.selectedSlotIndex = getNextUnfilledSlot();
+        
+        // Re-render to show the next slot highlighted
+        renderGame();
+        
+        // Unlock animations
+        gameState.isAnimating = false;
       }
     }, 400);
   } else {
@@ -189,8 +214,9 @@ function handleWordTap(word, bankIndex) {
     if (constraintCheck.valid) {
       placeWord(word, selectedSlot, bankIndex);
       gameState.selectedSlotIndex = getNextUnfilledSlot();
-      // placeWord() already calls renderGame(), no need to call renderSlots()
+      renderGame(); // Ensure next slot is highlighted
     }
+    gameState.isAnimating = false;
   }
 }
 
