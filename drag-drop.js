@@ -172,11 +172,12 @@ function handleWordTap(word, bankIndex) {
         bankElement.style.visibility = 'visible';
       } else {
         // Use desktop's placeWord function (from game-logic.js)
+        // It calls renderGame() which updates everything including hints
         placeWord(word, selectedSlot, bankIndex);
         
         // Select next unfilled slot (mobile-specific behavior)
+        // renderGame() already called by placeWord(), so selection visual will update automatically
         gameState.selectedSlotIndex = getNextUnfilledSlot();
-        renderSlots(levels[currentLevelIndex]); // Update selection visual
       }
     }, 400);
   } else {
@@ -185,7 +186,7 @@ function handleWordTap(word, bankIndex) {
     if (constraintCheck.valid) {
       placeWord(word, selectedSlot, bankIndex);
       gameState.selectedSlotIndex = getNextUnfilledSlot();
-      renderSlots(levels[currentLevelIndex]);
+      // placeWord() already calls renderGame(), no need to call renderSlots()
     }
   }
 }
