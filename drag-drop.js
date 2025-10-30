@@ -32,7 +32,7 @@ function getNextUnfilledSlot() {
 // Select a slot (for mobile tap mode)
 function selectSlot(slotIndex) {
   gameState.selectedSlotIndex = slotIndex;
-  renderSlots(levels[currentLevelIndex]); // Re-render to show selection
+  renderGame(); // Re-render everything including hints
 }
 
 // Handle slot tap on mobile
@@ -91,11 +91,14 @@ function animateWordRemoval(slotIndex, placedWord) {
       animWord.remove();
       bankElement.style.visibility = 'visible';
       
-      // Use desktop's removeWordFromSlot function (from game-logic.js)
-      removeWordFromSlot(slotIndex);
+      // Remove word from slot (updates state)
+      gameState.placedWords = gameState.placedWords.filter(pw => pw.slotIndex !== slotIndex);
       
       // Select this now-empty slot
-      selectSlot(slotIndex);
+      gameState.selectedSlotIndex = slotIndex;
+      
+      // Single renderGame() call to update everything: slots with selection, hints, and bank
+      renderGame();
     }, 300);
   } else {
     // Fallback without animation - use desktop function directly
