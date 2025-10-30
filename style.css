@@ -58,12 +58,12 @@
   --spacing-xl: 40px;
   
   /* Layout */
-  --container-width: 420px;
-  --container-height: 90vh;
-  --container-max-height: 800px;
-  --container-border-radius: 12px;
+  --container-width: 100vw;          /* Desktop: full width */
+  --container-height: 100vh;         /* Desktop: full height */
+  --container-max-height: none;      /* Desktop: no max height */
+  --container-border-radius: 0;      /* Desktop: no border radius */
   
-  /* Mobile-specific layout (full viewport) */
+  /* Mobile-specific layout (full viewport with portrait support for future) */
   --mobile-container-width: 100vw;
   --mobile-container-height: 100dvh;
   --mobile-border-radius: 0;
@@ -127,7 +127,7 @@
 
 body {
   font-family: Arial, sans-serif;
-  background: var(--color-bg-body);
+  background: var(--color-bg-container);  /* Use container color for desktop too */
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -149,7 +149,7 @@ body {
   flex-direction: column;
   background: var(--color-bg-container);
   border-radius: var(--container-border-radius);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: none;  /* Remove shadow for full-screen desktop */
   overflow: hidden;
 }
 
